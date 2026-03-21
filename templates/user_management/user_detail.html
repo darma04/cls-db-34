@@ -1,0 +1,170 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   USER DETAIL - Detail Pengguna
+   Halaman detail profil pengguna.
+   Info: data user, role, status, tanggal bergabung.
+   ==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block title %}{{ title }} - SIMKOS{% endblock title %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="py-3 mb-4">
+        <span class="text-muted fw-light">Manajemen User /</span> Detail User
+    </h4>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <h5 class="card-header">Detail Profil User</h5>
+                <!-- User Info Display -->
+                <div class="card-body">
+                    <div class="d-flex align-items-start align-items-sm-center gap-4 mb-4">
+                        <div class="avatar avatar-xl">
+                            <span class="avatar-initial rounded bg-label-primary" style="font-size: 2.5rem;">
+                                <i class="ri-user-line"></i>
+                            </span>
+                        </div>
+                        <div class="button-wrapper">
+                            <h5 class="mb-1">{{ user_obj.username }}</h5>
+                            <div class="mb-2">
+                                {% if user_obj.is_superuser %}
+                                <span class="badge bg-label-danger me-1"><i class="ri-shield-star-line me-1"></i>Superuser</span>
+                                {% elif user_obj.is_staff %}
+                                <span class="badge bg-label-warning me-1"><i class="ri-shield-user-line me-1"></i>Staff</span>
+                                {% else %}
+                                <span class="badge bg-label-info me-1"><i class="ri-user-line me-1"></i>User</span>
+                                {% endif %}
+                                
+                                {% if user_obj.is_active %}
+                                <span class="badge bg-label-success"><i class="ri-check-line me-1"></i>Aktif</span>
+                                {% else %}
+                                <span class="badge bg-label-secondary"><i class="ri-close-line me-1"></i>Nonaktif</span>
+                                {% endif %}
+                            </div>
+                            <div class="text-muted small">Bergabung sejak {{ user_obj.date_joined|date:"d M Y" }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2 mb-3">
+                        <a href="{% url 'user_management:user_edit' user_obj.pk %}" class="btn btn-primary">
+                            <i class="ri-edit-line me-1"></i>Edit User
+                        </a>
+                        <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                            <i class="ri-arrow-left-line me-1"></i>Kembali
+                        </a>
+                    </div>
+                </div>
+                
+                <hr class="my-0">
+                
+                <!-- User Details -->
+                <div class="card-body">
+                    <form>
+                        <div class="row">
+                            <div class="mb-3 col-md-6">
+                                <label class="form-label">Username</label>
+                                <input class="form-control" type="text" value="{{ user_obj.username }}" readonly />
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label class="form-label">Email</label>
+                                <input class="form-control" type="text" value="{{ user_obj.email|default:'-' }}" readonly />
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label class="form-label">Nama Depan</label>
+                                <input class="form-control" type="text" value="{{ user_obj.first_name|default:'-' }}" readonly />
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label class="form-label">Nama Belakang</label>
+                                <input class="form-control" type="text" value="{{ user_obj.last_name|default:'-' }}" readonly />
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label class="form-label">Role</label>
+                                <input class="form-control" type="text" value="{% if user_obj.is_superuser %}Superuser{% elif user_obj.is_staff %}Staff{% else %}User{% endif %}" readonly />
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label class="form-label">Status</label>
+                                <input class="form-control" type="text" value="{% if user_obj.is_active %}Aktif{% else %}Nonaktif{% endif %}" readonly />
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label class="form-label">Login Terakhir</label>
+                                <input class="form-control" type="text" value="{{ user_obj.last_login|date:'d M Y H:i'|default:'-' }}" readonly />
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label class="form-label">Tanggal Bergabung</label>
+                                <input class="form-control" type="text" value="{{ user_obj.date_joined|date:'d M Y H:i' }}" readonly />
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Permissions Card -->
+            <div class="card mb-4">
+                <h5 class="card-header"><i class="ri-shield-check-line me-2"></i>Hak Akses & Permissions</h5>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar avatar-sm me-3">
+                                    <span class="avatar-initial rounded bg-label-{% if user_obj.is_active %}success{% else %}secondary{% endif %}">
+                                        <i class="ri-checkbox-circle-line"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">Status Aktif</h6>
+                                    <small class="text-muted">{% if user_obj.is_active %}User dapat login{% else %}User tidak dapat login{% endif %}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar avatar-sm me-3">
+                                    <span class="avatar-initial rounded bg-label-{% if user_obj.is_staff %}warning{% else %}secondary{% endif %}">
+                                        <i class="ri-shield-user-line"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">Staff Status</h6>
+                                    <small class="text-muted">{% if user_obj.is_staff %}Akses admin panel{% else %}Tidak ada akses admin{% endif %}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar avatar-sm me-3">
+                                    <span class="avatar-initial rounded bg-label-{% if user_obj.is_superuser %}danger{% else %}secondary{% endif %}">
+                                        <i class="ri-shield-star-line"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">Superuser</h6>
+                                    <small class="text-muted">{% if user_obj.is_superuser %}Akses penuh sistem{% else %}Tidak ada akses super{% endif %}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            {% if not user_obj.is_superuser %}
+            <div class="card border-danger">
+                <div class="card-header bg-label-danger">
+                    <h5 class="mb-0 text-danger"><i class="ri-alert-line me-2"></i>Danger Zone</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Tindakan berikut tidak dapat dibatalkan. Gunakan dengan hati-hati.</p>
+                    <a href="{% url 'user_management:user_delete' user_obj.pk %}" class="btn btn-danger">
+                        <i class="ri-delete-bin-line me-1"></i>Hapus User
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock content %}

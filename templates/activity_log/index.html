@@ -1,0 +1,251 @@
+{% extends 'layout/layout_vertical.html' %}
+{% load static %}
+
+{% block title %}Log Aktivitas - Central License Server{% endblock title %}
+
+{% block vendor_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-bs5/datatables.bootstrap5.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/flatpickr/flatpickr.css' %}" />
+{% endblock vendor_css %}
+
+{% block vendor_js %}
+{{ block.super }}
+<script src="{% static 'vendor/libs/datatables-bs5/datatables-bootstrap5.js' %}"></script>
+<script src="{% static 'vendor/libs/flatpickr/flatpickr.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="{% static 'js/simkos_export.js' %}"></script>
+{% endblock vendor_js %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="py-3 mb-4">
+        <span class="text-muted fw-light">Sistem /</span> Log Aktivitas
+    </h4>
+
+    <!-- Filter Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Tanggal Mulai</label>
+                    <input type="text" class="form-control flatpickr-input" id="startDate" placeholder="Pilih tanggal">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Tanggal Akhir</label>
+                    <input type="text" class="form-control flatpickr-input" id="endDate" placeholder="Pilih tanggal">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">User</label>
+                    <select class="form-select" id="userFilter">
+                        <option value="">Semua User</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}">{{ u.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Aksi</label>
+                    <select class="form-select" id="actionFilter">
+                        <option value="">Semua Aksi</option>
+                        {% for code, label in action_choices %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="row g-3 mt-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Pilih Kolom</label>
+                    <div class="dropdown">
+                        <button class="btn btn-label-secondary dropdown-toggle waves-effect w-100" type="button"
+                            id="columnFilterDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                            <i class="ri-layout-column-line me-1"></i> Pilih Kolom
+                        </button>
+                        <div class="dropdown-menu p-3" style="min-width: 280px;">
+                            <h6 class="dropdown-header px-0 mb-2">Kolom Tabel</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="0" id="col-waktu" checked onchange="toggleColumns()">
+                                <label class="form-check-label" for="col-waktu">Waktu</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="1" id="col-user" checked onchange="toggleColumns()">
+                                <label class="form-check-label" for="col-user">User</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="2" id="col-aksi" checked onchange="toggleColumns()">
+                                <label class="form-check-label" for="col-aksi">Aksi</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="3" id="col-objek" checked onchange="toggleColumns()">
+                                <label class="form-check-label" for="col-objek">Objek</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="4" id="col-ip" checked onchange="toggleColumns()">
+                                <label class="form-check-label" for="col-ip">IP Address</label>
+                            </div>
+                            <div class="dropdown-divider my-2"></div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-primary flex-fill" onclick="selectAllColumns()"><i class="ri-checkbox-multiple-line"></i> Semua</button>
+                                <button class="btn btn-sm btn-label-secondary flex-fill" onclick="deselectAllColumns()"><i class="ri-checkbox-blank-line"></i> Kosongkan</button>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-1">Klik untuk memilih kolom</small>
+                </div>
+                <div class="col-md-6"></div>
+                <div class="col-md-3">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" onclick="applyFilter()"><i class="ri-filter-3-line me-1"></i>Terapkan Filter</button>
+                        <button class="btn btn-label-secondary" onclick="resetFilter()"><i class="ri-refresh-line me-1"></i>Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Riwayat Aktivitas Pengguna</h5>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-label-success" onclick="exportToExcel()"><i class="ri-file-excel-2-line me-1"></i>Export Excel</button>
+                <button type="button" class="btn btn-sm btn-label-danger" onclick="exportToPDF()"><i class="ri-file-pdf-line me-1"></i>Export PDF</button>
+            </div>
+        </div>
+        <div class="card-datatable">
+            <table class="datatables-log table table-hover" id="logTable">
+                <thead>
+                    <tr>
+                        <th>Waktu</th>
+                        <th>User</th>
+                        <th>Aksi</th>
+                        <th>Objek</th>
+                        <th>IP Address</th>
+                        <th>Detail</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in activities %}
+                    <tr>
+                        <td>{{ log.created_at|date:"d M Y H:i" }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar avatar-xs me-2">
+                                    <span class="avatar-initial rounded-circle bg-label-primary">
+                                        {{ log.user.username|make_list|first|upper }}
+                                    </span>
+                                </div>
+                                <span>{{ log.user.username|default:"System" }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if log.action == 'login' or log.action == 'approve' or log.action == 'activate' %}
+                            <span class="badge bg-label-success">{{ log.get_action_display }}</span>
+                            {% elif log.action == 'delete' or log.action == 'reject' or log.action == 'logout' or log.action == 'suspend' %}
+                            <span class="badge bg-label-danger">{{ log.get_action_display }}</span>
+                            {% elif log.action == 'create' %}
+                            <span class="badge bg-label-info">{{ log.get_action_display }}</span>
+                            {% elif log.action == 'update' %}
+                            <span class="badge bg-label-warning">{{ log.get_action_display }}</span>
+                            {% else %}
+                            <span class="badge bg-label-secondary">{{ log.get_action_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.model_name|default:"-" }} {{ log.object_repr|default:"" }}</td>
+                        <td>{{ log.ip_address|default:"-" }}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-icon btn-text-secondary" data-bs-toggle="tooltip" title="{{ log.description }}">
+                                <i class="ri-information-line"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <i class="ri-history-line ri-3x text-muted mb-3 d-block"></i>
+                            <p class="text-muted mb-0">Belum ada log aktivitas</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-footer-summary">
+                    <tr>
+                        <td colspan="6" class="text-start ps-4 py-3">
+                            <div class="d-flex align-items-center">
+                                <i class="ri-calculator-line me-2 text-primary" style="font-size: 1.5rem;"></i>
+                                <div><strong class="d-block">RINGKASAN</strong><small class="text-muted">{{ total_activities }} Log Aktivitas</small></div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block page_js %}
+<style>
+.dataTables_wrapper .dataTables_info{padding:1rem 1.5rem;font-size:.875rem;color:#697a8d}
+.dataTables_wrapper .dataTables_paginate{padding:1rem 1.5rem}
+.dataTables_wrapper .dataTables_length,.dataTables_wrapper .dataTables_filter{padding:0 1.5rem 1rem 1.5rem}
+.dataTables_wrapper .dataTables_filter input{border:1px solid #d9dee3;border-radius:.375rem;padding:.4375rem .875rem}
+.dataTables_wrapper .dataTables_length select{border:1px solid #d9dee3;border-radius:.375rem;padding:.4375rem 2rem .4375rem .875rem}
+.dataTables_wrapper .dataTables_paginate .paginate_button{padding:.438rem .875rem;border-radius:.375rem;margin:0 .125rem;border:none;background:transparent;color:#697a8d}
+.dataTables_wrapper .dataTables_paginate .paginate_button.current{background:#696cff!important;color:#fff!important;border:none}
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.disabled){background:rgba(105,108,255,.08)!important;border:none;color:#696cff!important}
+.card-datatable{padding-bottom:0}
+</style>
+<script>
+$(document).ready(function(){
+    flatpickr('#startDate',{dateFormat:'Y-m-d'});
+    flatpickr('#endDate',{dateFormat:'Y-m-d'});
+    {% if activities %}
+    $('#logTable').DataTable({
+        language:{"sEmptyTable":"Tidak ada data","sLengthMenu":"Tampilkan _MENU_ data","sZeroRecords":"Tidak ditemukan","sInfo":"Menampilkan _START_ s/d _END_ dari _TOTAL_ data","sInfoEmpty":"0 dari 0","sInfoFiltered":"(dari _MAX_ data)","sSearch":"Cari:","oPaginate":{"sFirst":"Pertama","sPrevious":"Sebelumnya","sNext":"Selanjutnya","sLast":"Terakhir"}},
+        order:[[0,'desc']],pageLength:25,lengthMenu:[[10,25,50,100,-1],['10','25','50','100','Semua']],
+        responsive:false,columnDefs:[{orderable:false,targets:[5]}],
+        dom:'<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>><"table-responsive"rt><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        initComplete:function(){$('.dataTables_filter input').attr('placeholder','Cari log...')}
+    });
+    {% endif %}
+});
+function applyFilter(){var p=new URLSearchParams();if($('#startDate').val())p.append('date_from',$('#startDate').val());if($('#endDate').val())p.append('date_to',$('#endDate').val());if($('#userFilter').val())p.append('user',$('#userFilter').val());if($('#actionFilter').val())p.append('action',$('#actionFilter').val());window.location.href='{% url "activity_log:index" %}?'+p.toString();}
+function resetFilter(){window.location.href='{% url "activity_log:index" %}';}
+    // Variables for SimkosExport
+    var EXCEL_INFO = {
+        name: "{{ export_excel_template.header_nama_perusahaan|escapejs|default:'Central License Server' }}",
+        address: "{{ export_excel_template.header_alamat|escapejs|default:'' }}",
+        phone: "{{ export_excel_template.header_telepon|escapejs|default:'' }}",
+        email: "{{ export_excel_template.header_email|escapejs|default:'' }}",
+        copyright: "{{ export_excel_template.footer_keterangan|escapejs|default:'Data bersifat rahasia.' }}"
+    };
+    var PDF_INFO = {
+        name: "{{ export_pdf_template.header_nama_perusahaan|escapejs|default:'Central License Server' }}",
+        address: "{{ export_pdf_template.header_alamat|escapejs|default:'' }}",
+        phone: "{{ export_pdf_template.header_telepon|escapejs|default:'' }}",
+        email: "{{ export_pdf_template.header_email|escapejs|default:'' }}",
+        copyright: "{{ export_pdf_template.footer_keterangan|escapejs|default:'Data bersifat rahasia.' }}"
+    };
+    var MONEY_COLS = []; 
+    var FOOTER_DATA = {}; 
+    var FOOTER_LABEL = "RINGKASAN ({{ total_activities }} Log Aktivitas)";
+    var DOCUMENT_TITLE = "Log Aktivitas";
+
+    function toggleColumns() { SimkosExport.toggleColumns('#logTable'); }
+    function selectAllColumns() { document.querySelectorAll('.column-checkbox').forEach(function(c){c.checked=true;}); toggleColumns(); }
+    function deselectAllColumns() { document.querySelectorAll('.column-checkbox').forEach(function(c){c.checked=false;}); toggleColumns(); }
+    
+    function exportToExcel() {
+        console.log("Export Log Excel clicked");
+        SimkosExport.buildExcel('#logTable', EXCEL_INFO, FOOTER_DATA, FOOTER_LABEL, DOCUMENT_TITLE, 'Log_Aktivitas', MONEY_COLS);
+    }
+
+    function exportToPDF() {
+        console.log("Export Log PDF clicked");
+        SimkosExport.buildPDF('#logTable', PDF_INFO, FOOTER_DATA, FOOTER_LABEL, DOCUMENT_TITLE, 'Log_Aktivitas', MONEY_COLS);
+    }
+</script>
+{% endblock page_js %}

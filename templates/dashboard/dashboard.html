@@ -1,0 +1,398 @@
+{% extends 'layout/layout_vertical.html' %}
+{% load static humanize %}
+{% block title %}Dashboard - Central License Server{% endblock title %}
+
+{% block vendor_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/libs/apex-charts/apex-charts.css' %}" />
+{% endblock vendor_css %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="ri-shield-keyhole-line me-2 text-primary"></i>Central License Manager</h4>
+            <p class="text-muted mb-0">Sistem manajemen keamanan & lisensi produk. Selamat datang, <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>!</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'licenses_ui:product_list' %}" class="btn btn-label-primary"><i
+                    class="ri-box-3-line me-1"></i>Data Produk</a>
+            <a href="{% url 'licenses_ui:client_list' %}" class="btn btn-label-info"><i
+                    class="ri-building-4-line me-1"></i>Data Klien</a>
+        </div>
+    </div>
+
+    <!-- Kartu Statistik Utama -->
+    <div class="row g-3 mb-4">
+        <!-- Total Lisensi -->
+        <div class="col-6 col-xl-3 col-lg-3 col-md-6 col-sm-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 fw-medium">Total Lisensi Dibuat</p>
+                            <h3 class="mb-0">{{ total_licenses }}</h3>
+                            <small class="text-muted">Kunci Lisensi</small>
+                        </div>
+                        <div class="avatar">
+                            <span class="avatar-initial rounded-circle bg-label-primary">
+                                <i class="ri-key-2-line ri-24px"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lisensi Aktif -->
+        <div class="col-6 col-xl-3 col-lg-3 col-md-6 col-sm-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 fw-medium">Lisensi Aktif</p>
+                            <h3 class="mb-0">{{ active_licenses }}</h3>
+                            <small class="text-muted text-success">Berjalan Normal</small>
+                        </div>
+                        <div class="avatar">
+                            <span class="avatar-initial rounded-circle bg-label-success">
+                                <i class="ri-shield-check-line ri-24px"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lisensi Kadaluarsa -->
+        <div class="col-6 col-xl-3 col-lg-3 col-md-6 col-sm-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 fw-medium">Lisensi Kadaluarsa</p>
+                            <h3 class="mb-0">{{ expired_licenses }}</h3>
+                            <small class="text-muted text-danger">Wajib Perpanjang</small>
+                        </div>
+                        <div class="avatar">
+                            <span class="avatar-initial rounded-circle bg-label-danger">
+                                <i class="ri-timer-line ri-24px"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lisensi Ditangguhkan -->
+        <div class="col-6 col-xl-3 col-lg-3 col-md-6 col-sm-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 fw-medium">Ditangguhkan / Blokir</p>
+                            <h3 class="mb-0">{{ suspended_licenses }}</h3>
+                            <small class="text-muted text-warning">Akses Diblokir</small>
+                        </div>
+                        <div class="avatar">
+                            <span class="avatar-initial rounded-circle bg-label-warning">
+                                <i class="ri-close-circle-line ri-24px"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grafik Gelombang Besar: Lisensi Per Bulan -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0"><i class="ri-line-chart-line me-2 text-primary"></i>Tren Lisensi 12 Bulan Terakhir</h5>
+                <small class="text-muted">Perkembangan lisensi aktif, kadaluarsa, dan ditangguhkan</small>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="licenseWaveChart"></div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Data Klien Terbaru -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0"><i class="ri-building-4-line me-2 text-info"></i>Klien Terbaru</h5>
+                        <small class="text-muted">Daftar {{ total_client }} Total Klien</small>
+                    </div>
+                    <a href="{% url 'licenses_ui:client_list' %}"
+                        class="btn btn-sm btn-label-info rounded-pill">Lihat Semua</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nama Klien</th>
+                                <th>Telepon</th>
+                                <th>Bergabung</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in recent_clients %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar avatar-sm me-2">
+                                            <span class="avatar-initial rounded-circle bg-label-info">
+                                                {{ c.name|first }}
+                                            </span>
+                                        </div>
+                                        <span class="fw-medium">{{ c.name }}</span>
+                                    </div>
+                                </td>
+                                <td>{{ c.phone|default:"-" }}</td>
+                                <td>{{ c.created_at|date:"d M Y" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">Belum ada data klien yang terdaftar.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Lisensi Terbaru -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0"><i class="ri-key-2-line me-2 text-primary"></i>Kunci Lisensi Terbaru</h5>
+                        <small class="text-muted">Daftar {{ total_product }} Total Produk Tersedia</small>
+                    </div>
+                    <a href="{% url 'licenses_ui:licensekey_list' %}"
+                        class="btn btn-sm btn-label-primary rounded-pill">Lihat Semua</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Kunci Lisensi</th>
+                                <th>Klien</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for l in recent_licenses %}
+                            <tr>
+                                <td><span class="fw-medium text-primary">{{ l.key }}</span><br><small
+                                        class="text-muted">{{ l.product.name }}</small></td>
+                                <td>{{ l.client.name }}</td>
+                                <td>
+                                    {% if l.status == 'active' %}
+                                    <span class="badge bg-label-success rounded-pill">Aktif</span>
+                                    {% elif l.status == 'expired' %}
+                                    <span class="badge bg-label-danger rounded-pill">Kadaluarsa</span>
+                                    {% else %}
+                                    <span class="badge bg-label-warning rounded-pill">Ditangguhkan</span>
+                                    {% endif %}
+                                    {% if l.is_activated %}
+                                    <br><small class="text-muted">Diaktifkan</small>
+                                    {% else %}
+                                    <br><small class="text-muted">Menunggu Aktivasi</small>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">Belum ada kunci lisensi yang dibuat.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block vendor_js %}
+{{ block.super }}
+<script src="{% static 'vendor/libs/apex-charts/apexcharts.js' %}"></script>
+{% endblock vendor_js %}
+
+{% block page_js %}
+<script>
+// ============ Wave Chart: Tren Lisensi 12 Bulan Terakhir ============
+// Gaya sesuai SERPTECH-Software (dropShadow, smooth gradient, animasi modern)
+document.addEventListener('DOMContentLoaded', function(){
+    var chartEl = document.querySelector('#licenseWaveChart');
+    if (!chartEl) return;
+
+    var chartLabels = {{ chart_labels|safe }};
+    var chartActive = {{ chart_active|safe }};
+    var chartExpired = {{ chart_expired|safe }};
+    var chartSuspended = {{ chart_suspended|safe }};
+    var chartTotal = {{ chart_total|safe }};
+
+    // Deteksi dark mode
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark' || document.body.classList.contains('dark-style');
+
+    // Palet warna modern — sesuai Materialize & dark mode
+    var chartColors = ['#7367f0', '#28c76f', '#ea5455', '#ff9f43'];
+
+    var series = [
+        { name: 'Total Dibuat', data: chartTotal },
+        { name: 'Aktif', data: chartActive },
+        { name: 'Kadaluarsa', data: chartExpired },
+        { name: 'Ditangguhkan', data: chartSuspended }
+    ];
+
+    var options = {
+        chart: {
+            type: 'area',
+            height: 380,
+            fontFamily: 'Inter, -apple-system, sans-serif',
+            background: 'transparent',
+            toolbar: {
+                show: true,
+                tools: {
+                    download: '<i class="ri-download-2-line" style="font-size:16px"></i>',
+                    selection: false,
+                    zoom: false,
+                    zoomin: false,
+                    zoomout: false,
+                    pan: false,
+                    reset: false
+                }
+            },
+            animations: {
+                enabled: true,
+                easing: 'easeinout',
+                speed: 800,
+                dynamicAnimation: { enabled: true, speed: 350 }
+            },
+            dropShadow: {
+                enabled: true,
+                top: 6,
+                left: 0,
+                blur: 6,
+                opacity: isDark ? 0.15 : 0.08,
+                color: chartColors.slice(0, series.length)
+            }
+        },
+        colors: chartColors.slice(0, series.length),
+        dataLabels: { enabled: false },
+        stroke: {
+            curve: 'smooth',
+            width: 3,
+            lineCap: 'round'
+        },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shade: isDark ? 'dark' : 'light',
+                type: 'vertical',
+                shadeIntensity: 0.3,
+                opacityFrom: isDark ? 0.25 : 0.4,
+                opacityTo: 0.02,
+                stops: [0, 95, 100]
+            }
+        },
+        series: series,
+        xaxis: {
+            categories: chartLabels,
+            labels: {
+                style: {
+                    colors: isDark ? '#b4b5ba' : '#a5a3ae',
+                    fontSize: '13px',
+                    fontWeight: 400
+                }
+            },
+            axisBorder: { show: false },
+            axisTicks: { show: false },
+            crosshairs: {
+                stroke: {
+                    color: isDark ? '#555' : '#ddd',
+                    dashArray: 4
+                }
+            }
+        },
+        yaxis: {
+            labels: {
+                style: {
+                    colors: isDark ? '#b4b5ba' : '#a5a3ae',
+                    fontSize: '13px'
+                },
+                formatter: function(val) {
+                    return val.toFixed(0);
+                }
+            },
+            min: 0,
+            forceNiceScale: true
+        },
+        tooltip: {
+            theme: isDark ? 'dark' : 'light',
+            shared: true,
+            intersect: false,
+            style: { fontSize: '13px' },
+            x: { show: true },
+            y: {
+                formatter: function(val) {
+                    return val + ' lisensi';
+                }
+            },
+            marker: { show: true }
+        },
+        legend: {
+            position: 'top',
+            horizontalAlign: 'left',
+            fontSize: '13px',
+            fontWeight: 500,
+            labels: { colors: isDark ? '#ccc' : '#555' },
+            markers: {
+                size: 5,
+                shape: 'circle',
+                strokeWidth: 0,
+                offsetX: -3
+            },
+            itemMargin: { horizontal: 12, vertical: 4 }
+        },
+        markers: {
+            size: 0,
+            hover: { size: 6, sizeOffset: 3 },
+            strokeWidth: 2,
+            strokeColors: isDark ? '#2b2c40' : '#fff'
+        },
+        grid: {
+            borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+            strokeDashArray: 4,
+            padding: { top: -10, left: 10, right: 10, bottom: 0 },
+            xaxis: { lines: { show: false } },
+            yaxis: { lines: { show: true } }
+        },
+        responsive: [
+            {
+                breakpoint: 768,
+                options: {
+                    chart: { height: 280 },
+                    legend: { fontSize: '11px' },
+                    stroke: { width: 2 }
+                }
+            }
+        ]
+    };
+
+    var chart = new ApexCharts(chartEl, options);
+    chart.render();
+});
+</script>
+{% endblock page_js %}

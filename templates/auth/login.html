@@ -1,0 +1,162 @@
+{% extends layout_path %}
+{% comment %}
+==========================================================================
+   LOGIN - Halaman Masuk
+   ──────────────────────────────────────────────
+   Halaman login pengguna ke sistem ERP.
+   Form berada di dalam card agar tampilan lebih rapi dan terstruktur.
+
+   Field:
+   - Email atau Username
+   - Kata Sandi (dengan toggle show/hide)
+
+   Fitur:
+   - Ingat Saya (checkbox)
+   - Link Lupa Kata Sandi
+   - Link Daftar Akun Baru
+
+   Layout: Cover (ilustrasi kiri, form kanan)
+==========================================================================
+{% endcomment %}
+
+{% load static %}
+{% load i18n %}
+
+{# ── Title Halaman (muncul di tab browser) ── #}
+{% block title %}Masuk - {{ system_title|default:"ERP System" }}{% endblock %}
+
+
+
+{# ── Page CSS: Styling khusus halaman auth ── #}
+{% block page_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/css/pages/page-auth.css' %}" />
+{% endblock page_css %}
+
+{# ── Page JS: Script validasi form auth (vanilla JS, tanpa library) ── #}
+{% block page_js %}
+{{ block.super }}
+<script src="{% static 'js/pages-auth.js' %}?v=2"></script>
+{% endblock page_js %}
+
+{% block content %}
+<div class="authentication-wrapper authentication-cover">
+  {# ── Logo & Nama Sistem (pojok kiri atas) ── #}
+  <a href="{% url 'dashboard:index' %}" class="auth-cover-brand d-flex align-items-center gap-2">
+    <span class="app-brand-logo demo">{% include 'partials/logo.html' %}</span>
+    <span class="app-brand-text demo text-heading fw-semibold">{{ system_title|default:"ERP System" }}</span>
+  </a>
+
+  <div class="authentication-inner row m-0">
+    {# ── Ilustrasi Kiri (hanya tampil di desktop ≥ lg) ── #}
+    <div class="d-none d-lg-flex col-lg-7 col-xl-8 align-items-center justify-content-center p-12 pb-2">
+      <img src="{% static 'img/illustrations/auth-login-illustration-' %}{{ COOKIES.style|default:style }}.png"
+        class="auth-cover-illustration w-100" alt="auth-illustration"
+        data-app-light-img="illustrations/auth-login-illustration-light.png"
+        data-app-dark-img="illustrations/auth-login-illustration-dark.png" />
+      <img src="{% static 'img/illustrations/auth-cover-login-mask-' %}{{ COOKIES.style|default:style }}.png"
+        class="authentication-image" alt="mask" data-app-light-img="illustrations/auth-cover-login-mask-light.png"
+        data-app-dark-img="illustrations/auth-cover-login-mask-dark.png" />
+    </div>
+
+    {# ── Form Login (kolom kanan) ── #}
+    <div
+      class="d-flex col-12 col-lg-5 col-xl-4 align-items-center authentication-bg position-relative py-sm-12 px-sm-12 px-4 py-6">
+      <div class="w-px-400 mx-auto pt-5 pt-lg-0">
+
+  {% comment %}
+           ══════════════════════════════════════════
+           CARD WRAPPER — Form Login
+           Card dengan shadow dan border-radius agar
+           form terlihat lebih rapi dan terstruktur.
+           ══════════════════════════════════════════
+  {% endcomment %}
+
+        <div class="card shadow-lg border-0">
+          <div class="card-body p-4 p-sm-5">
+
+            {# ── Judul & Deskripsi ── #}
+            <h3 class="mb-2">Selamat Datang! 👋</h3>
+            <p class="mb-4">Silakan masuk ke akun Anda untuk melanjutkan</p>
+
+            {# ── Pesan Flash (sukses/error/warning) ── #}
+            {% if messages %}
+            {% for message in messages %}
+            <div
+              class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-danger{% else %}alert-warning{% endif %}"
+              role="alert">
+              {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            {# ── Form Login ── #}
+            <form id="formAuthentication" class="mb-3" action="{% url 'login' %}" method="post">
+              {% csrf_token %}
+              
+              {# Input Email/Username — type="text" agar bisa menerima email ATAU username #}
+              <div class="form-floating form-floating-outline" style="margin-bottom: 1.5rem !important;">
+                <input type="text" class="form-control" id="email" name="email-username"
+                  placeholder="Email atau Username" autofocus />
+                <label for="email">Email atau Username</label>
+              </div>
+
+              {# Input Kata Sandi (dengan toggle show/hide) #}
+              <div class="mb-4">
+                <div class="form-password-toggle">
+                  <div class="input-group input-group-merge">
+                    <div class="form-floating form-floating-outline">
+                      <input type="password" id="password" class="form-control" name="password"
+                        placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;"
+                        aria-describedby="password" />
+                      <label for="password">Kata Sandi</label>
+                    </div>
+                    <span class="input-group-text cursor-pointer"><i class="ri-eye-off-line"></i></span>
+                  </div>
+                </div>
+              </div>
+
+              {# Ingat Saya & Lupa Kata Sandi #}
+              <div class="mb-4 d-flex justify-content-between mt-4">
+                <div class="form-check mt-2">
+                  <input class="form-check-input" type="checkbox" id="remember-me">
+                  <label class="form-check-label" for="remember-me">
+                    Ingat Saya
+                  </label>
+                </div>
+                <a href="{% url 'forgot-password' %}" class="float-end mb-1 mt-2">
+                  <span>Lupa Kata Sandi?</span>
+                </a>
+              </div>
+
+              {# Redirect setelah login (jika ada ?next=) #}
+              {% if request.GET.next %}
+              <input type="hidden" name="next" value="{{request.GET.next}}">
+              {% endif %}
+
+              {# Tombol Masuk (dengan spinner loading) #}
+              <button id="btnSubmit" class="btn btn-primary d-grid w-100" type="submit">
+                <span id="btnText" class="me-1">Masuk</span>
+                <span id="btnLoader" class="spinner-border spinner-border-sm visually-hidden" role="status"
+                  aria-hidden="true"></span>
+              </button>
+            </form>
+
+            {# ── Link Daftar Akun Baru ── #}
+            <p class="text-center mb-0">
+              <span>Belum punya akun?</span>
+              <a href="{% url 'register' %}">
+                <span>Daftar Sekarang</span>
+              </a>
+            </p>
+
+          </div>
+        </div>
+        {# ── /CARD WRAPPER ── #}
+
+      </div>
+    </div>
+    {# ── /Form Login ── #}
+  </div>
+</div>
+{% endblock %}

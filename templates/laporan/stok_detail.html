@@ -1,0 +1,323 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   LAPORAN STOK DETAIL - Detail Laporan Stok
+   Halaman detail laporan stok per produk/gudang.
+   Info: mutasi stok, transfer masuk/keluar, grafik.
+   ==========================================================================
+{% endcomment %}
+{% load static %}
+{% load currency_filters %}
+
+{% block title %}Detail Stok - {{ stok.produk.nama }} - ERP{% endblock title %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="ri-stack-line me-2"></i>Detail Stok: {{ stok.produk.nama }}</h4>
+            <p class="text-muted mb-0">Informasi lengkap stok dengan riwayat pergerakan</p>
+        </div>
+        <a href="{% url 'laporan:stok' %}" class="btn btn-label-secondary">
+            <i class="ri-arrow-left-line me-1"></i> Kembali
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Info Produk & Stok -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="ri-information-line me-2"></i>Informasi Produk & Stok</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="40%"><i class="ri-box-3-line me-1 text-primary"></i> Nama Produk</th>
+                            <td><strong>{{ stok.produk.nama }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th><i class="ri-barcode-line me-1 text-primary"></i> SKU</th>
+                            <td><code>{{ stok.produk.sku }}</code></td>
+                        </tr>
+                        <tr>
+                            <th><i class="ri-building-line me-1 text-primary"></i> Gudang</th>
+                            <td><span class="badge bg-label-info">{{ stok.gudang.nama }}</span></td>
+                        </tr>
+                        <tr>
+                            <th><i class="ri-stack-line me-1 text-success"></i> Jumlah Stok</th>
+                            <td>
+                                <h5 class="mb-0">
+                                    <span class="badge {% if stok.jumlah == 0 %}bg-danger{% elif stok.jumlah <= 10 %}bg-warning{% else %}bg-success{% endif %} fs-6">
+                                        {{ stok.jumlah|floatformat:0 }} {{ stok.produk.satuan.nama }}
+                                    </span>
+                                </h5>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><i class="ri-apps-line me-1 text-primary"></i> Kategori</th>
+                            <td>{{ stok.produk.kategori.nama|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th><i class="ri-calendar-line me-1 text-muted"></i> Terakhir Diupdate</th>
+                            <td>{{ stok.diupdate_pada|date:"d M Y H:i" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Harga -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="ri-money-dollar-circle-line me-2"></i>Informasi Harga</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="40%">Harga Beli</th>
+                            <td class="text-end"><strong class="text-danger">{{ stok.produk.harga_beli|rupiah }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Harga Jual</th>
+                            <td class="text-end"><strong class="text-success">{{ stok.produk.harga_jual|rupiah }}</strong></td>
+                        </tr>
+                        <tr class="table-active">
+                            <th>Nilai Stok (Harga Beli)</th>
+                            <td class="text-end">
+                                {% widthratio stok.jumlah 1 stok.produk.harga_beli as nilai_stok %}
+                                <h5 class="mb-0 text-primary">{{ nilai_stok|rupiah }}</h5>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Riwayat Aktivitas Stok -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="ri-history-line me-2"></i>Riwayat Aktivitas Stok</h5>
+            <span class="badge bg-label-primary">{{ activity_logs|length }} aktivitas</span>
+        </div>
+        <div class="card-body">
+            {% include 'laporan/partials/timeline_style.html' %}
+            
+            <!-- Custom styles for stock activity -->
+            <style>
+                .qty-badge {
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 4px;
+                }
+                .qty-in {
+                    background-color: rgba(113, 221, 55, 0.16);
+                    color: #71dd37;
+                }
+                .qty-out {
+                    background-color: rgba(255, 62, 29, 0.16);
+                    color: #ff3e1d;
+                }
+                .source-link {
+                    font-size: 0.75rem;
+                    color: #696cff;
+                    text-decoration: none;
+                }
+                .source-link:hover {
+                    text-decoration: underline;
+                }
+                .qty-detail {
+                    font-size: 0.75rem;
+                    color: #697a8d;
+                    margin-top: 0.25rem;
+                }
+                .timeline-icon {
+                    font-size: 1rem;
+                    margin-right: 0.25rem;
+                }
+            </style>
+            
+            {% if activity_logs %}
+            <ul class="timeline mb-0">
+                {% for log in activity_logs %}
+                <li class="timeline-item timeline-item-transparent border-left-dashed">
+                    <!-- Timeline point dengan warna berdasarkan jenis aksi -->
+                    <span class="timeline-point timeline-point-{% if log.action == 'stock_in' %}success{% elif log.action == 'stock_out' %}danger{% elif log.action == 'stock_adjustment' %}warning{% elif log.action == 'stock_transfer_in' %}info{% elif log.action == 'stock_transfer_out' %}primary{% elif log.action == 'create' %}info{% elif log.action == 'update' %}warning{% elif log.action == 'delete' %}danger{% else %}secondary{% endif %}">
+                    </span>
+                    <div class="timeline-event">
+                        <!-- Header dengan icon dan judul -->
+                        <div class="d-flex align-items-center mb-1">
+                            {% if log.action == 'stock_in' %}
+                                <i class="ri-arrow-down-circle-line timeline-icon text-success"></i>
+                            {% elif log.action == 'stock_out' %}
+                                <i class="ri-arrow-up-circle-line timeline-icon text-danger"></i>
+                            {% elif log.action == 'stock_adjustment' %}
+                                <i class="ri-settings-3-line timeline-icon text-warning"></i>
+                            {% elif log.action == 'stock_transfer_in' %}
+                                <i class="ri-login-box-line timeline-icon text-info"></i>
+                            {% elif log.action == 'stock_transfer_out' %}
+                                <i class="ri-logout-box-line timeline-icon text-primary"></i>
+                            {% elif log.action == 'create' %}
+                                <i class="ri-add-circle-line timeline-icon text-info"></i>
+                            {% elif log.action == 'update' %}
+                                <i class="ri-edit-line timeline-icon text-warning"></i>
+                            {% elif log.action == 'delete' %}
+                                <i class="ri-delete-bin-line timeline-icon text-danger"></i>
+                            {% else %}
+                                <i class="ri-checkbox-circle-line timeline-icon text-secondary"></i>
+                            {% endif %}
+                            <span class="timeline-title">{{ log.get_action_display }}</span>
+                            
+                            <!-- Badge perubahan quantity -->
+                            {% if log.quantity_change is not None %}
+                                <span class="qty-badge ms-2 {% if log.quantity_change >= 0 %}qty-in{% else %}qty-out{% endif %}">
+                                    {% if log.quantity_change >= 0 %}+{% endif %}{{ log.quantity_change|floatformat:0 }}
+                                </span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Deskripsi -->
+                        {% if log.description %}
+                        <div class="timeline-desc">{{ log.description }}</div>
+                        {% endif %}
+                        
+                        <!-- Detail perubahan quantity (before/after) -->
+                        {% if log.quantity_before is not None and log.quantity_after is not None %}
+                        <div class="qty-detail">
+                            <i class="ri-stack-line"></i>
+                            {{ log.quantity_before|floatformat:0 }}
+                            <i class="ri-arrow-right-s-line"></i>
+                            {{ log.quantity_after|floatformat:0 }}
+                            {% if log.source_type %}
+                                <span class="ms-2">|</span>
+                                <span class="badge bg-label-{% if log.source_type == 'purchase' %}success{% elif log.source_type == 'sales' %}danger{% elif log.source_type == 'transfer' %}info{% elif log.source_type == 'adjustment' %}warning{% else %}secondary{% endif %} ms-1">
+                                    {{ log.get_source_type_display }}
+                                </span>
+                            {% endif %}
+                            {% if log.source_repr %}
+                                <code class="ms-1">{{ log.source_repr }}</code>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Detail perubahan JSON (untuk update biasa) -->
+                        {% if log.changes and not log.is_stock_action %}
+                            {% with changes_dict=log.changes|json_load_safe %}
+                                {% if changes_dict %}
+                                <ul class="changes-list">
+                                    {% for field, val in changes_dict.items %}
+                                    <li>
+                                        <span class="field-label">{{ field|title|replace_underscore:" " }}</span>
+                                        {% if val.old %}
+                                            <span class="val-old">{{ val.old }}</span>
+                                        {% endif %}
+                                        {% if val.old and val.new %}
+                                            <i class="ri-arrow-right-line arrow-icon"></i>
+                                        {% endif %}
+                                        {% if val.new %}
+                                            <span class="val-new">{{ val.new }}</span>
+                                        {% endif %}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                            {% endwith %}
+                        {% endif %}
+                        
+                        <!-- User dan waktu -->
+                        <div class="timeline-user">
+                            <i class="ri-user-3-line"></i>
+                            <span>{{ log.user.username|default:"System" }}</span>
+                            <span class="text-muted" style="margin-left: 5px;">• {{ log.timestamp|date:"d M Y, H:i" }}</span>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="ri-history-line ri-3x text-muted mb-3 d-block"></i>
+                <p class="text-muted">Belum ada riwayat aktivitas untuk stok ini</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Riwayat Purchase Orders -->
+    {% if po_items %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="ri-shopping-bag-line me-2"></i>Riwayat Pembelian (Purchase Orders)</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>No. PO</th>
+                            <th>Tanggal</th>
+                            <th>Supplier</th>
+                            <th>Qty</th>
+                            <th>Harga Satuan</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in po_items %}
+                        <tr>
+                            <td><code>{{ item.purchase_order.nomor_po }}</code></td>
+                            <td>{{ item.purchase_order.tanggal|date:"d M Y" }}</td>
+                            <td>{{ item.purchase_order.supplier.nama }}</td>
+                            <td>{{ item.jumlah|floatformat:0 }}</td>
+                            <td>{{ item.harga_satuan|rupiah }}</td>
+                            <td><strong>{{ item.total|rupiah }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Riwayat Sales Orders -->
+    {% if so_items %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="ri-shopping-cart-line me-2"></i>Riwayat Penjualan (Sales Orders)</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>No. SO</th>
+                            <th>Tanggal</th>
+                            <th>Customer</th>
+                            <th>Qty</th>
+                            <th>Harga Satuan</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in so_items %}
+                        <tr>
+                            <td><code>{{ item.sales_order.nomor_so }}</code></td>
+                            <td>{{ item.sales_order.tanggal|date:"d M Y" }}</td>
+                            <td>{{ item.sales_order.customer.nama }}</td>
+                            <td>{{ item.jumlah|floatformat:0 }}</td>
+                            <td>{{ item.harga_satuan|rupiah }}</td>
+                            <td><strong>{{ item.total|rupiah }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock content %}

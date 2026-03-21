@@ -1,0 +1,319 @@
+{% extends "layout/layout_vertical.html" %}
+{% comment %}
+==========================================================================
+   PERMISSION LIST - Daftar Permission
+   Halaman daftar semua permission dalam sistem.
+   Tabel: nama, module, sub_module, aksi (CRUD).
+   ==========================================================================
+{% endcomment %}
+{% load i18n %}
+{% load static %}
+
+{% block head_title %}{{ title }}{% endblock %}
+
+{% block vendor_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-bs5/datatables.bootstrap5.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/sweetalert2/sweetalert2.css' %}" />
+{% endblock vendor_css %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-6">
+        <div>
+            <h4 class="mb-1">
+                <i class="ri-shield-check-line me-2"></i>Permissions List
+            </h4>
+            <p class="mb-0 text-muted">Each category includes permissions for modules configured in the system.</p>
+        </div>
+        {% if user_role == 'SUPERUSER' %}
+        <div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPermissionModal">
+                <i class="ri-add-line me-2"></i>Tambah Permission
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Permission Table -->
+    <div class="card">
+        <div class="card-datatable table-responsive">
+            <table class="datatables-permissions table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Role</th>
+                        <th>Module</th>
+                        <th>Permissions</th>
+                        <th>Assigned To</th>
+                        <th>Created Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for permission in permissions %}
+                    <tr>
+                        <td></td>
+                        <td>
+                            <span
+                                class="badge {% if permission.role == 'SUPERUSER' %}bg-danger{% elif permission.role == 'ADMIN' %}bg-primary{% elif permission.role == 'USER' %}bg-info{% else %}bg-secondary{% endif %}">
+                                {{ permission.get_role_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="ri-folder-line me-2 text-primary"></i>
+                                <span class="fw-medium">{{ permission.get_module_display }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1 flex-wrap">
+                                {% if permission.can_view %}
+                                <span class="badge bg-label-info">
+                                    <i class="ri-eye-line"></i> View
+                                </span>
+                                {% endif %}
+                                {% if permission.can_create %}
+                                <span class="badge bg-label-success">
+                                    <i class="ri-add-line"></i> Create
+                                </span>
+                                {% endif %}
+                                {% if permission.can_edit %}
+                                <span class="badge bg-label-warning">
+                                    <i class="ri-edit-line"></i> Edit
+                                </span>
+                                {% endif %}
+                                {% if permission.can_delete %}
+                                <span class="badge bg-label-danger">
+                                    <i class="ri-delete-bin-line"></i> Delete
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="text-muted">{{ permission.get_role_display }} users</span>
+                        </td>
+                        <td>
+                            <span class="text-muted">{{ permission.created_at|date:"d M Y"|default:"-" }}</span>
+                        </td>
+                        <td>
+                            {% if can_edit.access_control or can_delete.access_control %}
+                            <div class="dropdown">
+                                <button type="button" class="btn btn-sm btn-icon dropdown-toggle hide-arrow"
+                                    data-bs-toggle="dropdown">
+                                    <i class="ri-more-2-line"></i>
+                                </button>
+                                <div class="dropdown-menu">
+                                    {% if can_edit.access_control %}
+                                    <a class="dropdown-item" href="javascript:void(0);" data-bs-toggle="modal"
+                                        data-bs-target="#editPermissionModal" data-permission-id="{{ permission.pk }}">
+                                        <i class="ri-edit-line me-2"></i>Edit
+                                    </a>
+                                    {% endif %}
+                                    {% if can_edit.access_control and can_delete.access_control %}
+                                    <div class="dropdown-divider"></div>
+                                    {% endif %}
+                                    {% if can_delete.access_control %}
+                                    <a class="dropdown-item text-danger" href="javascript:void(0);"
+                                        onclick="confirmDelete({{ permission.pk }}, '{{ permission }}')">
+                                        <i class="ri-delete-bin-line me-2"></i>Delete
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="badge bg-label-secondary">
+                                <i class="ri-eye-line me-1"></i>View Only
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deletePermissionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger align-items-center py-3">
+                <h5 class="modal-title text-white mb-0">
+                    <i class="ri-error-warning-line me-2"></i>Konfirmasi Hapus
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="ri-delete-bin-line ri-3x text-danger mb-3 d-block"></i>
+                <h5 class="mb-2">Hapus Permission?</h5>
+                <p class="mb-0 text-muted">Permission: <strong id="permissionName"></strong></p>
+                <p class="mb-0 text-muted small">Tindakan ini tidak dapat dibatalkan!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="ri-delete-bin-line me-1"></i>Ya, Hapus
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Modals -->
+{% include "permission_management/_modals/add_permission_modal.html" %}
+{% include "permission_management/_modals/edit_permission_modal.html" %}
+
+{% endblock content %}
+
+{% block vendor_js %}
+{{ block.super }}
+<script src="{% static 'vendor/libs/datatables-bs5/datatables-bootstrap5.js' %}"></script>
+<script src="{% static 'vendor/libs/sweetalert2/sweetalert2.js' %}"></script>
+{% endblock vendor_js %}
+
+{% block page_js %}
+{% load static %}
+<script src="{% static 'js/permission_management.js' %}"></script>
+<style>
+    .dataTables_wrapper .dataTables_info {
+        padding: 1rem 1.5rem;
+        font-size: 0.875rem;
+        color: #697a8d
+    }
+
+    .dataTables_wrapper .dataTables_paginate {
+        padding: 1rem 1.5rem
+    }
+
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter {
+        padding: 0 1.5rem 1rem 1.5rem
+    }
+
+    .dataTables_wrapper .dataTables_filter input {
+        border: 1px solid #d9dee3;
+        border-radius: 0.375rem;
+        padding: 0.4375rem 0.875rem
+    }
+
+    .dataTables_wrapper .dataTables_length select {
+        border: 1px solid #d9dee3;
+        border-radius: 0.375rem;
+        padding: 0.4375rem 2rem 0.4375rem 0.875rem
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        padding: 0.438rem 0.875rem;
+        border-radius: 0.375rem;
+        margin: 0 0.125rem;
+        border: none;
+        background: transparent;
+        color: #697a8d
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+        background: #696cff !important;
+        color: white !important;
+        border: none
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.disabled) {
+        background: rgba(105, 108, 255, 0.08) !important;
+        border: none;
+        color: #696cff !important
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+        color: #c7cdd4 !important;
+        cursor: not-allowed
+    }
+
+    .card-datatable {
+        padding-bottom: 0
+    }
+
+    .datatables-permissions thead th {
+        font-weight: 600;
+        font-size: 0.8125rem;
+        text-transform: none;
+        letter-spacing: 0
+    }
+
+    @media (max-width:768px) {
+        .card-datatable {
+            overflow-x: hidden !important;
+            -webkit-overflow-scrolling: touch;
+            max-width: 100%
+        }
+
+        .datatables-permissions {
+            min-width: 900px !important;
+            width: 900px !important;
+            table-layout: auto !important
+        }
+
+        .dataTables_wrapper {
+            overflow-x: hidden !important;
+            max-width: 100% !important
+        }
+    }
+</style>
+<script>
+    // Inisialisasi DataTable untuk permissions
+    $(function() {
+        $('.datatables-permissions').DataTable({
+            order: [[1, 'asc']],
+            pageLength: 25,
+            lengthMenu: [[10, 25, 50, 75, 100, -1], ['10', '25', '50', '75', '100', 'Semua']],
+            responsive: false,
+            columnDefs: [
+                { orderable: false, targets: [0, 6] } // Nonaktifkan sort untuk kolom checkbox dan aksi
+            ],
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>><"table-responsive"rt><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+        });
+    });
+    
+    let deletePermissionId = null;
+
+    function confirmDelete(id, name) {
+        deletePermissionId = id;
+        document.getElementById('permissionName').textContent = name;
+        new bootstrap.Modal(document.getElementById('deletePermissionModal')).show();
+    }
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
+        if (!deletePermissionId) return;
+
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Menghapus...';
+
+        fetch(`/access/permissions/ajax/${deletePermissionId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Gagal menghapus permission: ' + data.message);
+                    this.disabled = false;
+                    this.innerHTML = '<i class="ri-delete-bin-line me-1"></i>Ya, Hapus';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan saat menghapus permission');
+                this.disabled = false;
+                this.innerHTML = '<i class="ri-delete-bin-line me-1"></i>Ya, Hapus';
+            });
+    });
+</script>
+{% endblock page_js %}

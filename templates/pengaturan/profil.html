@@ -1,0 +1,144 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   PENGATURAN PROFIL - Profil Pengguna
+   Halaman pengaturan profil pengguna yang sedang login.
+   Field: nama, email, foto profil, ubah password.
+   ==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block title %}Profil Saya - CLS{% endblock title %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="py-3 mb-4">
+        <span class="text-muted fw-light">Pengaturan /</span> Profil Saya
+    </h4>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <h5 class="card-header">Detail Profil</h5>
+                <!-- Account -->
+                <div class="card-body">
+                    <form id="formAccountSettings" method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <!-- Avatar Section -->
+                        <div class="d-flex align-items-start align-items-sm-center gap-4 mb-4">
+                            <img src="{{ profile.get_avatar_url }}" alt="user-avatar"
+                                class="d-block w-px-100 h-px-100 rounded" id="uploadedAvatar" 
+                                style="object-fit: cover;" />
+                            <div class="button-wrapper">
+                                <label for="avatar" class="btn btn-primary me-2 mb-3" tabindex="0">
+                                    <span class="d-none d-sm-block"><i class="ri-upload-2-line me-1"></i>Upload Foto</span>
+                                    <i class="ri-upload-2-line d-block d-sm-none"></i>
+                                    <input type="file" id="avatar" name="avatar" class="account-file-input" hidden accept="image/png, image/jpeg, image/gif" />
+                                </label>
+                                {% if profile.avatar %}
+                                <button type="button" class="btn btn-outline-danger account-image-reset mb-3" id="resetAvatar">
+                                    <i class="ri-refresh-line d-block d-sm-none"></i>
+                                    <span class="d-none d-sm-block">Hapus Foto</span>
+                                </button>
+                                <input type="hidden" name="remove_avatar" id="removeAvatarInput" value="0">
+                                {% endif %}
+                                <p class="text-muted mb-0">Format: JPG, GIF atau PNG. Maksimal 800KB</p>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="row">
+                            <div class="mb-3 col-md-6">
+                                <label for="first_name" class="form-label">Nama Depan</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" 
+                                    value="{{ user.first_name }}" placeholder="Nama depan">
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="last_name" class="form-label">Nama Belakang</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" 
+                                    value="{{ user.last_name }}" placeholder="Nama belakang">
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="email" class="form-label">E-mail</label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                    value="{{ user.email }}" placeholder="email@example.com">
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="phone" class="form-label">Nomor Telepon</label>
+                                <input type="text" class="form-control" id="phone" name="phone" 
+                                    value="{{ profile.phone|default:'' }}" placeholder="08xx-xxxx-xxxx">
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label class="form-label">Username</label>
+                                <input type="text" class="form-control" value="{{ user.username }}" readonly disabled>
+                                <small class="text-muted">Username tidak dapat diubah</small>
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label class="form-label">Role</label>
+                                <input type="text" class="form-control" value="{% if user.is_superuser %}Superuser{% elif user.is_staff %}Staff{% else %}User{% endif %}" readonly disabled>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="ri-save-line me-1"></i>Simpan Perubahan
+                            </button>
+                            <a href="{% url 'dashboard:index' %}" class="btn btn-outline-secondary">Batal</a>
+                        </div>
+                    </form>
+                </div>
+                <!-- /Account -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block page_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const avatarInput = document.getElementById('avatar');
+    const avatarPreview = document.getElementById('uploadedAvatar');
+    const resetBtn = document.getElementById('resetAvatar');
+    const removeInput = document.getElementById('removeAvatarInput');
+    let originalSrc = avatarPreview.src;
+    
+    // Preview avatar on select
+    if (avatarInput) {
+        avatarInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    avatarPreview.src = e.target.result;
+                };
+                reader.readAsDataURL(e.target.files[0]);
+                
+                // Reset remove flag if new file selected
+                if (removeInput) {
+                    removeInput.value = '0';
+                }
+            }
+        });
+    }
+    
+    // Reset avatar
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            avatarPreview.src = '/static/img/avatars/1.png';
+            avatarInput.value = '';
+            removeInput.value = '1';
+        });
+    }
+});
+</script>
+{% endblock page_js %}

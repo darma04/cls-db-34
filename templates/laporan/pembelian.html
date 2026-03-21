@@ -1,0 +1,529 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   LAPORAN PEMBELIAN - Laporan Pembelian
+   Halaman laporan Purchase Order dan pembelian.
+   Filter: periode, supplier. Export Excel & PDF.
+   ==========================================================================
+{% endcomment %}
+{% load static %}
+{% load currency_filters %}
+
+{% block title %}Laporan Pembelian - ERP{% endblock title %}
+
+{% block vendor_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-bs5/datatables.bootstrap5.css' %}" />
+{% endblock vendor_css %}
+
+{% block vendor_js %}
+{{ block.super }}
+<script src="{% static 'vendor/libs/datatables-bs5/datatables-bootstrap5.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+{% endblock vendor_js %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="mb-4"><i class="ri-shopping-bag-line me-2"></i>Laporan Pembelian</h4>
+
+    <!-- 4 Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-3 col-sm-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div class="card-info">
+                            <p class="card-text text-muted">Total Pembelian</p>
+                            <h4 class="mb-0 text-danger">{{ total_pembelian|rupiah }}</h4>
+                        </div>
+                        <div class="card-icon">
+                            <span class="badge bg-label-danger rounded p-2">
+                                <i class="ri-money-dollar-circle-line ri-24px"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-sm-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div class="card-info">
+                            <p class="card-text text-muted">Total PO</p>
+                            <h4 class="mb-0">{{ total_po }}</h4>
+                        </div>
+                        <div class="card-icon">
+                            <span class="badge bg-label-primary rounded p-2">
+                                <i class="ri-file-list-3-line ri-24px"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-sm-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div class="card-info">
+                            <p class="card-text text-muted">Total Supplier</p>
+                            <h4 class="mb-0">{{ total_supplier }}</h4>
+                        </div>
+                        <div class="card-icon">
+                            <span class="badge bg-label-info rounded p-2">
+                                <i class="ri-truck-line ri-24px"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-sm-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div class="card-info">
+                            <p class="card-text text-muted">Rata-rata PO</p>
+                            <h4 class="mb-0 text-warning">{{ rata_rata_po|rupiah }}</h4>
+                        </div>
+                        <div class="card-icon">
+                            <span class="badge bg-label-warning rounded p-2">
+                                <i class="ri-percent-line ri-24px"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Tanggal Mulai</label>
+                    <input type="date" class="form-control" id="startDate" value="{{ filter_start_date }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Tanggal Akhir</label>
+                    <input type="date" class="form-control" id="endDate" value="{{ filter_end_date }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Supplier</label>
+                    <select class="form-select" id="supplierFilter">
+                        <option value="">Semua Supplier</option>
+                        {% for supplier in supplier_list %}
+                        <option value="{{ supplier.id }}">{{ supplier.nama }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="row g-3 mt-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Pilih Kolom</label>
+                    <div class="dropdown">
+                        <button class="btn btn-label-secondary dropdown-toggle w-100" type="button"
+                            data-bs-toggle="dropdown"><i class="ri-layout-column-line me-1"></i>Pilih Kolom</button>
+                        <div class="dropdown-menu p-3" style="min-width:280px;">
+                            <h6 class="dropdown-header px-0 mb-2">Kolom Tabel</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="0" checked
+                                    onchange="toggleColumns()">
+                                <label class="form-check-label">No. PO</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="1" checked
+                                    onchange="toggleColumns()">
+                                <label class="form-check-label">Tanggal</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="2" checked
+                                    onchange="toggleColumns()">
+                                <label class="form-check-label">Supplier</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="3" checked
+                                    onchange="toggleColumns()">
+                                <label class="form-check-label">Produk</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="4" checked
+                                    onchange="toggleColumns()">
+                                <label class="form-check-label">Stok</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="5" checked
+                                    onchange="toggleColumns()">
+                                <label class="form-check-label">Total</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="6" checked
+                                    onchange="toggleColumns()">
+                                <label class="form-check-label">Pajak</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="7" checked
+                                    onchange="toggleColumns()">
+                                <label class="form-check-label">Status</label>
+                            </div>
+                            <div class="dropdown-divider my-2"></div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-primary flex-fill"
+                                    onclick="selectAllColumns()">Semua</button>
+                                <button class="btn btn-sm btn-label-secondary flex-fill"
+                                    onclick="deselectAllColumns()">Kosongkan</button>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-1">Klik untuk memilih kolom</small>
+                </div>
+                <div class="col-md-6"></div>
+                <div class="col-md-3">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" onclick="applyFilter()"><i
+                                class="ri-filter-3-line me-1"></i>Terapkan Filter</button>
+                        <button class="btn btn-label-secondary" onclick="resetFilter()"><i
+                                class="ri-refresh-line me-1"></i>Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between">
+            <h5 class="mb-0">Daftar Purchase Order</h5>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-label-success" onclick="exportToExcel()"><i
+                        class="ri-file-excel-2-line me-1"></i>Export Excel</button>
+                <button class="btn btn-sm btn-label-danger" onclick="exportToPDF()"><i
+                        class="ri-file-pdf-line me-1"></i>Export PDF</button>
+            </div>
+        </div>
+        <div class="card-datatable table-responsive">
+            <table class="table table-hover" id="poTable">
+                <thead>
+                    <tr>
+                        <th>No. PO</th>
+                        <th>Tanggal</th>
+                        <th>Supplier</th>
+                        <th>Produk</th>
+                        <th>Stok</th>
+                        <th>Total</th>
+                        <th>Pajak</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for po in purchase_order_list %}
+                    <tr>
+                        <td><code>{{ po.nomor_po }}</code></td>
+                        <td>{{ po.tanggal|date:"d M Y" }}</td>
+                        <td>{{ po.supplier.nama }}</td>
+                        <td><small>{{ po.produk_list|truncatechars:40 }}</small></td>
+                        <td class="text-center">{{ po.stok_total|floatformat:0 }}</td>
+                        <td>{{ po.total_harga|rupiah }}</td>
+                        <td>{{ po.pajak_display|rupiah }}</td>
+                        <td>
+                            {% if po.status == 'draft' %}
+                            <span class="badge bg-label-secondary">Draft</span>
+                            {% elif po.status == 'submitted' %}
+                            <span class="badge bg-label-primary">Diajukan</span>
+                            {% elif po.status == 'approved' %}
+                            <span class="badge bg-label-info">Disetujui</span>
+                            {% elif po.status == 'received' %}
+                            <span class="badge bg-label-success">Diterima</span>
+                            {% else %}
+                            <span class="badge bg-label-danger">Dibatalkan</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="dropdown">
+                                <button type="button" class="btn btn-sm btn-icon dropdown-toggle hide-arrow"
+                                    data-bs-toggle="dropdown">
+                                    <i class="ri-more-2-line"></i>
+                                </button>
+                                <div class="dropdown-menu">
+                                    <a class="dropdown-item" href="{% url 'laporan:pembelian-detail' po.pk %}">
+                                        <i class="ri-eye-line me-2"></i>Lihat Detail
+                                    </a>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5">
+                            <p class="text-muted">Belum ada data pembelian</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-footer-summary">
+                    <tr>
+                        <td colspan="3" class="text-start ps-4 py-3" style="vertical-align: middle;">
+                            <div class="d-flex align-items-center justify-content-start">
+                                <i class="ri-calculator-line me-2 text-primary" style="font-size: 1.5rem;"></i>
+                                <div class="text-start">
+                                    <strong class="d-block" style="font-size: 1rem;">RINGKASAN</strong>
+                                    <small class="text-muted" style="font-size: 0.75rem;">{{ total_po }} Purchase
+                                        Order</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3" style="vertical-align: middle;">
+                            <small class="text-muted fw-medium">Produk</small>
+                        </td>
+                        <td class="py-3 text-center" style="vertical-align: middle;">
+                            <div class="d-flex flex-column align-items-center">
+                                <span class="badge bg-label-info d-flex align-items-center gap-1 mb-1"
+                                    style="font-size: 0.8rem; padding: 0.4rem 0.6rem;">
+                                    <i class="ri-stack-line"></i>
+                                    <span>{{ total_stok|floatformat:0 }}</span>
+                                </span>
+                                <small class="text-muted fw-medium" style="font-size: 0.7rem;">Total Stok</small>
+                            </div>
+                        </td>
+                        <td class="py-3" style="vertical-align: middle;">
+                            <div class="d-flex flex-column align-items-center">
+                                <span class="badge bg-label-danger d-flex align-items-center gap-1 mb-1"
+                                    style="font-size: 0.8rem; padding: 0.4rem 0.6rem;">
+                                    <i class="ri-money-dollar-circle-line"></i>
+                                    <span>{{ total_pembelian|rupiah }}</span>
+                                </span>
+                                <small class="text-muted fw-medium" style="font-size: 0.7rem;">Total Pembelian</small>
+                            </div>
+                        </td>
+                        <td class="py-3" style="vertical-align: middle;">
+                            <div class="d-flex flex-column align-items-center">
+                                <span class="badge bg-label-warning d-flex align-items-center gap-1 mb-1"
+                                    style="font-size: 0.8rem; padding: 0.4rem 0.6rem;">
+                                    <i class="ri-percent-line"></i>
+                                    <span>{{ total_pajak|rupiah }}</span>
+                                </span>
+                                <small class="text-muted fw-medium" style="font-size: 0.7rem;">Total Pajak</small>
+                            </div>
+                        </td>
+                        <td class="py-3"></td>
+                        <td class="py-3"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block page_js %}
+<style>
+    .dataTables_wrapper .dataTables_info {
+        padding: 1rem 1.5rem
+    }
+
+    .card-datatable {
+        padding-bottom: 0
+    }
+</style>
+<script>
+    $(document).ready(function () {
+        {% if purchase_order_list %}
+        $('#poTable').DataTable({
+            language: { "sEmptyTable": "Tidak ada data", "sLengthMenu": "Tampilkan _MENU_ data", "sInfo": "_START_ - _END_ dari _TOTAL_ data", "sSearch": "Cari:", "oPaginate": { "sPrevious": "Sebelumnya", "sNext": "Selanjutnya" } },
+            order: [[1, 'desc']],
+            pageLength: 25,
+            lengthMenu: [[10, 25, 50, 75, 100, -1], ['10', '25', '50', '75', '100', 'Semua']],
+            responsive: false,
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>><"table-responsive"rt><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+        });
+        {% endif %}
+    });
+
+    // Company Information (from Template Cetak settings)
+    const COMPANY_INFO = {
+        name: "{{ export_pdf_template.header_nama_perusahaan }}",
+        address: "{{ export_pdf_template.header_alamat }}",
+        phone: "{{ export_pdf_template.header_telepon }}",
+        email: "Email: {{ export_pdf_template.header_email }}",
+        website: "{{ export_pdf_template.header_website|default:'' }}",
+        copyright: "{{ export_pdf_template.footer_copyright }}"
+    };
+
+    function exportToExcel() {
+        const table = document.getElementById('poTable');
+        if (!table) { alert('Tabel tidak ditemukan!'); return; }
+
+        let html = '<table border="1">';
+        html += '<thead><tr style="background-color: #696CFF; color: #FFFFFF; font-weight: bold;">';
+
+        const headerRow = table.querySelector('thead tr');
+        const thList = headerRow.querySelectorAll('th');
+        // Exclude last column (Aksi)
+        for (let i = 0; i < thList.length - 1; i++) {
+            if (thList[i].style.display !== 'none') {
+                html += `<th>${thList[i].textContent.trim()}</th>`;
+            }
+        }
+        html += '</tr></thead><tbody>';
+
+        const tbody = table.querySelector('tbody');
+        if (tbody) {
+            tbody.querySelectorAll('tr').forEach(tr => {
+                const cells = tr.querySelectorAll('td');
+                if (cells.length === 0 || (cells.length === 1 && cells[0].colSpan > 1)) return;
+                html += '<tr>';
+                for (let i = 0; i < cells.length - 1; i++) {
+                    if (cells[i].style.display !== 'none') {
+                        html += `<td>${cells[i].textContent.trim().replace(/\s+/g, ' ')}</td>`;
+                    }
+                }
+                html += '</tr>';
+            });
+        }
+
+        // RINGKASAN
+        const tfoot = table.querySelector('tfoot');
+        if (tfoot) {
+            html += '<tr style="background-color: #f8f9fa; font-weight: bold;">';
+            html += '<td colspan="3">RINGKASAN: {{ total_po }} Purchase Order</td>';
+            html += '<td>Produk</td>';
+            html += '<td>Stok: {{ total_stok|floatformat:0 }}</td>';
+            html += '<td>Total: {{ total_pembelian|rupiah }}</td>';
+            html += '<td>Pajak: {{ total_pajak|rupiah }}</td>';
+            html += '<td></td>';
+            html += '</tr>';
+        }
+        html += '</tbody></table>';
+
+        const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+        const link = document.createElement('a');
+        link.setAttribute('href', URL.createObjectURL(blob));
+        link.setAttribute('download', 'Laporan_Pembelian_' + new Date().toISOString().slice(0, 10) + '.xls');
+        link.click();
+    }
+
+    function exportToPDF() {
+        if (typeof pdfMake === 'undefined') { alert('pdfMake library tidak tersedia!'); return; }
+        const table = document.getElementById('poTable');
+        if (!table) { alert('Tabel tidak ditemukan!'); return; }
+
+        const headers = [];
+        const headerRow = table.querySelector('thead tr');
+        const thList = headerRow.querySelectorAll('th');
+        for (let i = 0; i < thList.length - 1; i++) {
+            if (thList[i].style.display !== 'none') {
+                headers.push({
+                    text: thList[i].textContent.trim(),
+                    style: 'tableHeader',
+                    fillColor: '#696CFF',
+                    color: '#FFFFFF',
+                    bold: true
+                });
+            }
+        }
+
+        const body = [headers];
+        const tbody = table.querySelector('tbody');
+        if (tbody) {
+            tbody.querySelectorAll('tr').forEach(tr => {
+                const cells = tr.querySelectorAll('td');
+                if (cells.length === 0 || (cells.length === 1 && cells[0].colSpan > 1)) return;
+                const row = [];
+                for (let i = 0; i < cells.length - 1; i++) {
+                    if (cells[i].style.display !== 'none') {
+                        row.push(cells[i].textContent.trim().replace(/\s+/g, ' '));
+                    }
+                }
+                if (row.length > 0) body.push(row);
+            });
+        }
+
+        // RINGKASAN row
+        const summaryRow = [
+            { text: 'RINGKASAN: {{ total_po }} PO | Stok: {{ total_stok|floatformat:0 }} | Total: {{ total_pembelian|rupiah }} | Pajak: {{ total_pajak|rupiah }}', colSpan: headers.length, bold: true, fillColor: '#f8f9fa', alignment: 'left' }
+        ];
+        for (let i = 1; i < headers.length; i++) { summaryRow.push({}); }
+        body.push(summaryRow);
+
+        const docDefinition = {
+            pageOrientation: 'landscape',
+            pageMargins: [40, 100, 40, 60],
+            header: function (currentPage) {
+                return {
+                    margin: [40, 20, 40, 10],
+                    columns: [
+                        {
+                            width: '*',
+                            stack: [
+                                { text: COMPANY_INFO.name, style: 'companyName' },
+                                { text: COMPANY_INFO.address, style: 'companyInfo' },
+                                { text: COMPANY_INFO.phone + ' | ' + COMPANY_INFO.email, style: 'companyInfo' }
+                            ]
+                        },
+                        { width: 'auto', stack: [{ text: 'Halaman ' + currentPage, style: 'pageNumber', alignment: 'right' }] }
+                    ]
+                };
+            },
+            content: [
+                { text: 'LAPORAN PEMBELIAN', style: 'documentTitle', margin: [0, 0, 0, 5] },
+                { text: 'Tanggal: ' + new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }), style: 'dateText', margin: [0, 0, 0, 20] },
+                {
+                    table: { headerRows: 1, widths: Array(headers.length).fill('auto'), body: body },
+                    layout: {
+                        fillColor: (rowIndex) => (rowIndex === 0) ? '#696CFF' : ((rowIndex % 2 === 0) ? '#F5F5F9' : null),
+                        hLineWidth: () => 0.5, vLineWidth: () => 0.5,
+                        hLineColor: () => '#DBDADE', vLineColor: () => '#DBDADE'
+                    }
+                }
+            ],
+            footer: function (currentPage, pageCount) {
+                return {
+                    margin: [40, 10, 40, 10],
+                    columns: [
+                        { text: 'Dicetak pada: ' + new Date().toLocaleString('id-ID'), style: 'footerText' },
+                        { text: '© ' + new Date().getFullYear() + ' ' + COMPANY_INFO.name, style: 'footerText', alignment: 'right' }
+                    ]
+                };
+            },
+            styles: {
+                companyName: { fontSize: 14, bold: true, color: '#5F61E6' },
+                companyInfo: { fontSize: 9, color: '#697A8D' },
+                pageNumber: { fontSize: 9, color: '#697A8D' },
+                documentTitle: { fontSize: 18, bold: true, color: '#5F61E6' },
+                dateText: { fontSize: 10, color: '#697A8D' },
+                tableHeader: { bold: true, fontSize: 10, color: '#FFFFFF' },
+                footerText: { fontSize: 8, color: '#697A8D' }
+            },
+            defaultStyle: { fontSize: 9 }
+        };
+
+        pdfMake.createPdf(docDefinition).download('Laporan_Pembelian_' + new Date().toISOString().slice(0, 10) + '.pdf');
+    }
+
+    function toggleColumns() {
+        const checkboxes = document.querySelectorAll('.column-checkbox');
+        checkboxes.forEach(cb => {
+            var colIdx = parseInt(cb.value);
+            $('#poTable').DataTable().column(colIdx).visible(cb.checked);
+        });
+    }
+    function selectAllColumns() { document.querySelectorAll('.column-checkbox').forEach(e => { e.checked = true }); toggleColumns(); }
+    function deselectAllColumns() { document.querySelectorAll('.column-checkbox').forEach(e => { e.checked = false }); toggleColumns(); }
+
+    function applyFilter() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const params = new URLSearchParams();
+        if (startDate) params.set('start_date', startDate);
+        if (endDate) params.set('end_date', endDate);
+        const qs = params.toString();
+        window.location.href = window.location.pathname + (qs ? '?' + qs : '');
+    }
+    function resetFilter() {
+        window.location.href = window.location.pathname;
+    }
+</script>
+{% endblock page_js %}

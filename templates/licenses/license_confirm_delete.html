@@ -1,0 +1,86 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   LICENSE DELETE - Konfirmasi Hapus Lisensi
+==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block title %}Hapus Lisensi - Central License Server{% endblock title %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="py-3 mb-4">
+        <span class="text-muted fw-light">Kunci Lisensi /</span> Hapus Lisensi
+    </h4>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger mb-4">
+                <div class="card-header bg-label-danger d-flex align-items-center">
+                    <i class="ri-alert-line ri-24px text-danger me-2"></i>
+                    <h5 class="mb-0 text-danger">Konfirmasi Hapus Lisensi</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger d-flex align-items-center" role="alert">
+                        <i class="ri-error-warning-line ri-22px me-2"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">Peringatan!</h6>
+                            <span>Kunci lisensi yang sudah dihapus <strong>tidak dapat dipulihkan</strong>. Klien dengan lisensi ini tidak akan bisa mengakses aplikasi.</span>
+                        </div>
+                    </div>
+
+                    <div class="card bg-lighter mb-4">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar avatar-lg me-3">
+                                    <span class="avatar-initial rounded bg-label-primary">
+                                        <i class="ri-key-2-line ri-28px"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0">{{ object.key }}</h5>
+                                    <small class="text-muted">{{ object.product.name }}</small>
+                                </div>
+                            </div>
+                            <hr class="my-3">
+                            <div class="row g-3">
+                                <div class="col-sm-4">
+                                    <small class="text-muted d-block mb-1">Klien</small>
+                                    <span>{{ object.client.name }}</span>
+                                </div>
+                                <div class="col-sm-4">
+                                    <small class="text-muted d-block mb-1">Status</small>
+                                    {% if object.status == 'active' %}
+                                    <span class="badge bg-label-success">Aktif</span>
+                                    {% elif object.status == 'expired' %}
+                                    <span class="badge bg-label-danger">Kadaluarsa</span>
+                                    {% else %}
+                                    <span class="badge bg-label-warning">Ditangguhkan</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col-sm-4">
+                                    <small class="text-muted d-block mb-1">Domain</small>
+                                    <span>{{ object.registered_domain|default:"-" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'licenses_ui:licensekey_list' %}" class="btn btn-label-secondary">
+                                <i class="ri-close-line me-1"></i>Batal
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="ri-delete-bin-line me-1"></i>Ya, Hapus Lisensi
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

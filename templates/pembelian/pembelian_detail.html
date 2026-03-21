@@ -1,0 +1,45 @@
+{% extends 'layout/layout_vertical.html' %}
+{% load humanize %}
+{% block title %}Detail Pembelian{% endblock %}
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="py-3 mb-4"><span class="text-muted fw-light">Pembelian /</span> {{ pembelian.nomor_transaksi }}</h4>
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between"><h5 class="mb-0">Detail Transaksi</h5><span class="badge bg-label-{% if pembelian.status == 'completed' %}success{% elif pembelian.status == 'pending' %}warning{% elif pembelian.status == 'confirmed' %}info{% else %}danger{% endif %} fs-6">{{ pembelian.get_status_display }}</span></div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6"><strong>No Transaksi:</strong> {{ pembelian.nomor_transaksi }}</div>
+                        <div class="col-md-6"><strong>Tanggal:</strong> {{ pembelian.tanggal|date:"d/m/Y" }}</div>
+                        <div class="col-md-6"><strong>Klien:</strong> {{ pembelian.klien.name }}</div>
+                        <div class="col-md-6"><strong>Dibuat Oleh:</strong> {{ pembelian.dibuat_oleh.username|default:"-" }}</div>
+                    </div>
+                    {% if pembelian.catatan %}<p class="text-muted">{{ pembelian.catatan }}</p>{% endif %}
+                    <div class="table-responsive">
+                        <table class="table"><thead><tr><th>Produk</th><th>Jumlah</th><th>Durasi</th><th>Harga Satuan</th><th>Subtotal</th></tr></thead>
+                        <tbody>{% for i in items %}<tr><td>{{ i.produk.name }} ({{ i.produk.code }})</td><td>{{ i.jumlah }}</td><td>{{ i.durasi_hari }} hari</td><td>Rp {{ i.harga_satuan|floatformat:0|intcomma }}</td><td>Rp {{ i.subtotal|floatformat:0|intcomma }}</td></tr>{% endfor %}</tbody>
+                        <tfoot><tr><td colspan="4" class="text-end"><strong>TOTAL:</strong></td><td><strong>Rp {{ pembelian.total_harga|floatformat:0|intcomma }}</strong></td></tr></tfoot></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header"><h6 class="mb-0">Ubah Status</h6></div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'pembelian:pembelian_update_status' pembelian.pk %}">{% csrf_token %}
+                        <select name="status" class="form-select mb-2">{% for val, label in pembelian.STATUS_CHOICES %}<option value="{{ val }}" {% if pembelian.status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+                        <button type="submit" class="btn btn-primary w-100"><i class="ri-check-line me-1"></i>Update Status</button>
+                    </form>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" action="{% url 'pembelian:pembelian_delete' pembelian.pk %}" onsubmit="return confirm('Hapus transaksi ini?')">{% csrf_token %}<button type="submit" class="btn btn-danger w-100"><i class="ri-delete-bin-line me-1"></i>Hapus Transaksi</button></form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

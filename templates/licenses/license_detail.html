@@ -1,0 +1,446 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   LICENSE DETAIL - Detail Kunci Lisensi + Perangkat Terikat + Log
+==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block title %}Detail Lisensi - Central License Server{% endblock title %}
+
+{% block vendor_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/libs/sweetalert2/sweetalert2.css' %}" />
+{% endblock vendor_css %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="ri-key-2-line me-2 text-primary"></i>Detail Lisensi</h4>
+            <p class="text-muted mb-0">Informasi lengkap kunci lisensi, perangkat terikat, dan riwayat aktivitas</p>
+        </div>
+        <div class="d-flex gap-2">
+            <div class="dropdown">
+                <button class="btn btn-label-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="ri-more-2-line"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="{% url 'licenses_ui:licensekey_update' license.pk %}">
+                        <i class="ri-edit-line me-2"></i>Edit Lisensi</a></li>
+                    <li><a class="dropdown-item text-danger" href="{% url 'licenses_ui:licensekey_delete' license.pk %}">
+                        <i class="ri-delete-bin-line me-2"></i>Hapus Lisensi</a></li>
+                </ul>
+            </div>
+            <a href="{% url 'licenses_ui:licensekey_list' %}" class="btn btn-label-secondary">
+                <i class="ri-arrow-left-line me-1"></i>Kembali
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Informasi Lisensi -->
+        <div class="col-xl-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="ri-shield-keyhole-line me-2 text-primary"></i>
+                    <h5 class="mb-0">Informasi Kunci Lisensi</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label text-muted">Kunci Lisensi</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control fw-bold text-primary" value="{{ license.key }}" id="licenseKeyInput" readonly>
+                                <button class="btn btn-label-primary" type="button" onclick="copyLicenseKey()">
+                                    <i class="ri-file-copy-line me-1"></i>Salin
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Produk</label>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar avatar-sm me-2">
+                                    <span class="avatar-initial rounded-circle bg-label-primary">
+                                        <i class="ri-box-3-line"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <strong>{{ license.product.name }}</strong>
+                                    <br><span class="badge bg-label-secondary">{{ license.product.code }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Klien</label>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar avatar-sm me-2">
+                                    <span class="avatar-initial rounded-circle bg-label-info">
+                                        {{ license.client.name|first }}
+                                    </span>
+                                </div>
+                                <strong>{{ license.client.name }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted">Domain Terdaftar</label>
+                            <p class="mb-0">{{ license.registered_domain|default:"Belum didaftarkan" }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted">Durasi</label>
+                            <p class="mb-0">{{ license.duration_days }} Hari</p>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted">Maks Perangkat</label>
+                            <p class="mb-0"><span class="badge bg-label-primary">{{ license.max_devices }}</span></p>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted">Dibuat</label>
+                            <p class="mb-0">{{ license.created_at|date:"d M Y, H:i" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabel Perangkat Terikat (Device Bindings) -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-smartphone-line me-2 text-primary"></i>
+                        <h5 class="mb-0">Perangkat Terikat</h5>
+                    </div>
+                    <span class="badge bg-label-{% if active_devices >= license.max_devices %}danger{% else %}success{% endif %}">
+                        {{ active_devices }}/{{ license.max_devices }} Slot Terisi
+                    </span>
+                </div>
+                <div class="card-datatable table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Hardware ID</th>
+                                <th>Nama Perangkat</th>
+                                <th>IP Address</th>
+                                <th>Domain</th>
+                                <th>Terakhir Aktif</th>
+                                <th>Status</th>
+                                <th style="width: 80px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for binding in device_bindings %}
+                            <tr id="device-row-{{ binding.pk }}">
+                                <td>
+                                    <code class="text-primary" style="font-size: 0.8rem;">{{ binding.hardware_id|truncatechars:20 }}</code>
+                                </td>
+                                <td>{{ binding.device_name|default:"-" }}</td>
+                                <td><code>{{ binding.ip_address|default:"-" }}</code></td>
+                                <td>{{ binding.domain|default:"-" }}</td>
+                                <td>{{ binding.last_seen|date:"d M Y, H:i" }}</td>
+                                <td>
+                                    {% if binding.is_active %}
+                                    <span class="badge bg-label-success">Aktif</span>
+                                    {% else %}
+                                    <span class="badge bg-label-secondary">Nonaktif</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if binding.is_active %}
+                                    <div class="dropdown">
+                                        <button type="button" class="btn btn-sm btn-icon dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                                            <i class="ri-more-2-line"></i>
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-end">
+                                            <a class="dropdown-item text-danger" href="#" onclick="unlinkDevice({{ binding.pk }}, '{{ binding.device_name|default:binding.hardware_id|truncatechars:16 }}'); return false;">
+                                                <i class="ri-link-unlink me-2"></i>Unlink Perangkat
+                                            </a>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    <i class="ri-device-line" style="font-size: 2rem;"></i>
+                                    <p class="mb-0 mt-2">Belum ada perangkat yang terikat pada lisensi ini.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tabel Riwayat Aktivitas (License Log) -->
+            <div class="card">
+                <div class="card-header d-flex align-items-center">
+                    <i class="ri-history-line me-2 text-primary"></i>
+                    <h5 class="mb-0">Riwayat Aktivitas Lisensi</h5>
+                </div>
+                <div class="card-datatable table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Waktu</th>
+                                <th>Aksi</th>
+                                <th>Detail</th>
+                                <th>IP Address</th>
+                                <th>Hardware ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in license_logs %}
+                            <tr>
+                                <td><small>{{ log.timestamp|date:"d M Y, H:i:s" }}</small></td>
+                                <td>
+                                    {% if log.action == 'activate' %}
+                                    <span class="badge bg-label-success"><i class="ri-check-line me-1"></i>{{ log.get_action_display }}</span>
+                                    {% elif log.action == 'validate' %}
+                                    <span class="badge bg-label-info"><i class="ri-refresh-line me-1"></i>{{ log.get_action_display }}</span>
+                                    {% elif log.action == 'deactivate' or log.action == 'unbind_device' %}
+                                    <span class="badge bg-label-warning"><i class="ri-link-unlink me-1"></i>{{ log.get_action_display }}</span>
+                                    {% elif log.action == 'suspend' %}
+                                    <span class="badge bg-label-danger"><i class="ri-forbid-line me-1"></i>{{ log.get_action_display }}</span>
+                                    {% elif log.action == 'bind_device' %}
+                                    <span class="badge bg-label-primary"><i class="ri-smartphone-line me-1"></i>{{ log.get_action_display }}</span>
+                                    {% elif log.action == 'expired' %}
+                                    <span class="badge bg-label-danger"><i class="ri-timer-line me-1"></i>{{ log.get_action_display }}</span>
+                                    {% else %}
+                                    <span class="badge bg-label-secondary">{{ log.get_action_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td><small>{{ log.detail|default:"-" }}</small></td>
+                                <td><code>{{ log.ip_address|default:"-" }}</code></td>
+                                <td><code style="font-size: 0.75rem;">{{ log.hardware_id|truncatechars:16|default:"-" }}</code></td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="ri-history-line" style="font-size: 2rem;"></i>
+                                    <p class="mb-0 mt-2">Belum ada riwayat aktivitas.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status & Timeline (Sidebar) -->
+        <div class="col-xl-4">
+            <!-- Status Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="ri-pulse-line me-2"></i>Status Lisensi</h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if license.status == 'active' %}
+                    <div class="avatar avatar-xl mb-3">
+                        <span class="avatar-initial rounded-circle bg-label-success">
+                            <i class="ri-shield-check-line ri-36px"></i>
+                        </span>
+                    </div>
+                    <h4 class="text-success mb-1">AKTIF</h4>
+                    <p class="text-muted mb-0">Lisensi berjalan normal</p>
+                    {% elif license.status == 'expired' %}
+                    <div class="avatar avatar-xl mb-3">
+                        <span class="avatar-initial rounded-circle bg-label-danger">
+                            <i class="ri-timer-line ri-36px"></i>
+                        </span>
+                    </div>
+                    <h4 class="text-danger mb-1">KADALUARSA</h4>
+                    <p class="text-muted mb-0">Lisensi perlu diperpanjang</p>
+                    {% else %}
+                    <div class="avatar avatar-xl mb-3">
+                        <span class="avatar-initial rounded-circle bg-label-warning">
+                            <i class="ri-close-circle-line ri-36px"></i>
+                        </span>
+                    </div>
+                    <h4 class="text-warning mb-1">DITANGGUHKAN</h4>
+                    <p class="text-muted mb-0">Akses diblokir sementara</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Device Summary Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="ri-smartphone-line me-2"></i>Perangkat</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Slot Terisi</span>
+                        <strong>{{ active_devices }} / {{ license.max_devices }}</strong>
+                    </div>
+                    <div class="progress mb-3" style="height: 8px;">
+                        {% widthratio active_devices license.max_devices 100 as usage_pct %}
+                        <div class="progress-bar {% if active_devices >= license.max_devices %}bg-danger{% else %}bg-success{% endif %}"
+                             role="progressbar" style="width: {{ usage_pct }}%"></div>
+                    </div>
+                    <small class="text-muted">
+                        {% if active_devices >= license.max_devices %}
+                        <i class="ri-error-warning-line text-danger me-1"></i>Batas perangkat maksimal tercapai
+                        {% else %}
+                        <i class="ri-check-line text-success me-1"></i>Masih bisa menambah {{ license.max_devices|add:"-"|add:active_devices }} perangkat
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+
+            <!-- Timeline Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="ri-time-line me-2"></i>Timeline</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="timeline mb-0">
+                        <li class="timeline-item timeline-item-transparent">
+                            <span class="timeline-point timeline-point-secondary"></span>
+                            <div class="timeline-event">
+                                <div class="timeline-header">
+                                    <h6 class="mb-0">Lisensi Dibuat</h6>
+                                </div>
+                                <small class="text-muted">{{ license.created_at|date:"d M Y, H:i" }}</small>
+                            </div>
+                        </li>
+                        {% if license.is_activated %}
+                        <li class="timeline-item timeline-item-transparent">
+                            <span class="timeline-point timeline-point-success"></span>
+                            <div class="timeline-event">
+                                <div class="timeline-header">
+                                    <h6 class="mb-0">Diaktifkan</h6>
+                                </div>
+                                <small class="text-muted">{{ license.activated_at|date:"d M Y, H:i" }}</small>
+                            </div>
+                        </li>
+                        {% endif %}
+                        {% if license.expires_at %}
+                        <li class="timeline-item timeline-item-transparent border-transparent">
+                            <span class="timeline-point timeline-point-{% if license.status == 'expired' %}danger{% else %}primary{% endif %}"></span>
+                            <div class="timeline-event">
+                                <div class="timeline-header">
+                                    <h6 class="mb-0">{% if license.status == 'expired' %}Kadaluarsa{% else %}Akan Kadaluarsa{% endif %}</h6>
+                                </div>
+                                <small class="text-muted">{{ license.expires_at|date:"d M Y, H:i" }}</small>
+                            </div>
+                        </li>
+                        {% endif %}
+                        {% if not license.is_activated %}
+                        <li class="timeline-item timeline-item-transparent border-transparent">
+                            <span class="timeline-point timeline-point-warning"></span>
+                            <div class="timeline-event">
+                                <div class="timeline-header">
+                                    <h6 class="mb-0">Menunggu Aktivasi</h6>
+                                </div>
+                                <small class="text-muted">Belum diaktifkan oleh klien</small>
+                            </div>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block vendor_js %}
+{{ block.super }}
+<script src="{% static 'vendor/libs/sweetalert2/sweetalert2.js' %}"></script>
+{% endblock vendor_js %}
+
+{% block page_js %}
+{% csrf_token %}
+<script>
+function getCsrfToken() {
+    const input = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (input) return input.value;
+    const cookies = document.cookie.split(';');
+    for (let c of cookies) {
+        c = c.trim();
+        if (c.startsWith('csrftoken=')) return c.substring('csrftoken='.length);
+    }
+    return '';
+}
+
+function copyLicenseKey() {
+    const input = document.getElementById('licenseKeyInput');
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+        const btn = input.nextElementSibling;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="ri-check-line me-1"></i>Tersalin!';
+        btn.classList.remove('btn-label-primary');
+        btn.classList.add('btn-success');
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-label-primary');
+        }, 2000);
+    });
+}
+
+function unlinkDevice(bindingId, deviceName) {
+    Swal.fire({
+        icon: 'warning',
+        title: 'Konfirmasi Unlink Perangkat',
+        html: `<p>Apakah Anda yakin ingin meng-unlink perangkat <strong>${deviceName}</strong> dari lisensi ini?</p>
+               <p class="text-muted mb-0">Perangkat akan dinonaktifkan dan slot akan tersedia untuk perangkat lain.</p>`,
+        showCancelButton: true,
+        confirmButtonText: '<i class="ri-link-unlink me-1"></i>Ya, Unlink!',
+        cancelButtonText: 'Batal',
+        customClass: {
+            confirmButton: 'btn btn-danger',
+            cancelButton: 'btn btn-label-secondary'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+            fetch(`/licenses/device/${bindingId}/unlink/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: data.message || 'Perangkat berhasil di-unlink.',
+                        confirmButtonText: 'OK',
+                        customClass: { confirmButton: 'btn btn-success' }
+                    }).then(() => { location.reload(); });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: data.message || 'Gagal mengunlink perangkat.',
+                        confirmButtonText: 'OK',
+                        customClass: { confirmButton: 'btn btn-primary' }
+                    });
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: 'Terjadi kesalahan jaringan. Silakan coba lagi.',
+                    confirmButtonText: 'OK',
+                    customClass: { confirmButton: 'btn btn-primary' }
+                });
+            });
+        }
+    });
+}
+</script>
+{% endblock page_js %}

@@ -1,0 +1,458 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   PENGATURAN PERUSAHAAN - Pengaturan Data Perusahaan
+   Halaman pengaturan informasi perusahaan.
+   Field: nama, alamat, telepon, email, logo perusahaan.
+   ==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block title %}Pengaturan Perusahaan - CLS{% endblock title %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="py-3 mb-4">
+        <span class="text-muted fw-light">Pengaturan /</span> Perusahaan
+    </h4>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Single Form for All Settings -->
+    <form method="POST" enctype="multipart/form-data" id="formPerusahaan">
+        {% csrf_token %}
+        
+        <!-- Company Identity Card -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <h5 class="card-header">Identitas Perusahaan</h5>
+                    <div class="card-body">
+                        {% if object.logo %}
+                        <div class="mb-4">
+                            <label class="form-label d-block">Logo Perusahaan Saat Ini</label>
+                            <img src="{{ object.logo.url }}" alt="Logo" class="rounded"
+                                style="max-width: 200px; max-height: 100px;">
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.nama_perusahaan.id_for_label }}" class="form-label">Nama
+                                    Perusahaan</label>
+                                {{ form.nama_perusahaan }}
+                                {% if form.nama_perusahaan.errors %}
+                                <div class="invalid-feedback d-block">{{ form.nama_perusahaan.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.telepon.id_for_label }}" class="form-label">Telepon Kantor</label>
+                                {{ form.telepon }}
+                                {% if form.telepon.errors %}
+                                <div class="invalid-feedback d-block">{{ form.telepon.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">Email Resmi</label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                <div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.website.id_for_label }}" class="form-label">Website</label>
+                                {{ form.website }}
+                                {% if form.website.errors %}
+                                <div class="invalid-feedback d-block">{{ form.website.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3 col-md-12">
+                                <label for="{{ form.alamat.id_for_label }}" class="form-label">Alamat Lengkap</label>
+                                {{ form.alamat }}
+                                {% if form.alamat.errors %}
+                                <div class="invalid-feedback d-block">{{ form.alamat.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.pajak_default.id_for_label }}" class="form-label">Default Pajak
+                                    (%)</label>
+                                {{ form.pajak_default }}
+                                {% if form.pajak_default.errors %}
+                                <div class="invalid-feedback d-block">{{ form.pajak_default.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.logo.id_for_label }}" class="form-label">Upload Logo Baru</label>
+                                {{ form.logo }}
+                                {% if form.logo.errors %}
+                                <div class="invalid-feedback d-block">{{ form.logo.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted d-block mt-1">Format: PNG, JPG. Max: 2MB</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Settings Card -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <h5 class="card-header">Pengaturan Sistem</h5>
+                    <div class="card-body">
+                        <div class="alert alert-primary" role="alert">
+                            <i class="ri-settings-3-line me-1"></i>
+                            <strong>Pengaturan Meta Sistem:</strong><br>
+                            Konfigurasi ini mengatur tampilan dan informasi sistem seperti judul, logo, favicon, dan mode
+                            maintenance.
+                        </div>
+
+                        {% if object.system_logo %}
+                        <div class="mb-4">
+                            <label class="form-label d-block">Logo Sistem Saat Ini</label>
+                            <img src="{{ object.system_logo.url }}" alt="System Logo" class="rounded"
+                                style="max-width: 200px; max-height: 100px;">
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.system_title.id_for_label }}" class="form-label">Judul
+                                    Sistem</label>
+                                {{ form.system_title }}
+                                {% if form.system_title.errors %}
+                                <div class="invalid-feedback d-block">{{ form.system_title.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted">Tampil di title bar browser</small>
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.system_keywords.id_for_label }}" class="form-label">Keywords
+                                    (SEO)</label>
+                                {{ form.system_keywords }}
+                                {% if form.system_keywords.errors %}
+                                <div class="invalid-feedback d-block">{{ form.system_keywords.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted">Pisahkan dengan koma</small>
+                            </div>
+                            <div class="mb-3 col-md-12">
+                                <label for="{{ form.system_description.id_for_label }}" class="form-label">Deskripsi
+                                    Sistem</label>
+                                {{ form.system_description }}
+                                {% if form.system_description.errors %}
+                                <div class="invalid-feedback d-block">{{ form.system_description.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted">Untuk meta description SEO</small>
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.system_logo.id_for_label }}" class="form-label">Upload Logo
+                                    Sistem</label>
+                                {{ form.system_logo }}
+                                {% if form.system_logo.errors %}
+                                <div class="invalid-feedback d-block">{{ form.system_logo.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted d-block mt-1">Untuk sidebar & login. Format: PNG, JPG</small>
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.system_favicon.id_for_label }}" class="form-label">Upload
+                                    Favicon</label>
+                                {{ form.system_favicon }}
+                                {% if form.system_favicon.errors %}
+                                <div class="invalid-feedback d-block">{{ form.system_favicon.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted d-block mt-1">Icon tab browser. 32x32px atau .ico</small>
+                            </div>
+                            <div class="mb-3 col-md-12">
+                                <div class="form-check form-switch">
+                                    {{ form.maintenance_mode }}
+                                    <label class="form-check-label" for="{{ form.maintenance_mode.id_for_label }}">
+                                        Aktifkan Mode Maintenance
+                                    </label>
+                                </div>
+                                {% if form.maintenance_mode.errors %}
+                                <div class="invalid-feedback d-block">{{ form.maintenance_mode.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted d-block mt-1">User tidak akan bisa akses sistem saat mode ini
+                                    aktif</small>
+                            </div>
+                            <div class="mb-3 col-md-12">
+                                <label for="{{ form.maintenance_message.id_for_label }}" class="form-label">Pesan
+                                    Maintenance</label>
+                                {{ form.maintenance_message }}
+                                {% if form.maintenance_message.errors %}
+                                <div class="invalid-feedback d-block">{{ form.maintenance_message.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted">Pesan yang ditampilkan saat mode maintenance aktif</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email/SMTP Settings Card -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <h5 class="card-header">Email/SMTP Settings</h5>
+                    <div class="card-body">
+                        <div class="alert alert-info" role="alert">
+                            <i class="ri-information-line me-1"></i>
+                            <strong>Konfigurasi Email untuk Forgot Password & Register:</strong><br>
+                            Email ini akan digunakan untuk mengirim link reset password dan verifikasi email saat user
+                            mendaftar.
+                            Untuk Gmail, gunakan <strong>App Password</strong> bukan password biasa.
+                        </div>
+
+                        <div class="row">
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.email_smtp_host.id_for_label }}" class="form-label">SMTP
+                                    Host</label>
+                                {{ form.email_smtp_host }}
+                                {% if form.email_smtp_host.errors %}
+                                <div class="invalid-feedback d-block">{{ form.email_smtp_host.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted">Contoh: smtp.gmail.com</small>
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.email_smtp_port.id_for_label }}" class="form-label">SMTP
+                                    Port</label>
+                                {{ form.email_smtp_port }}
+                                {% if form.email_smtp_port.errors %}
+                                <div class="invalid-feedback d-block">{{ form.email_smtp_port.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted">Biasanya: 587 (TLS) atau 465 (SSL)</small>
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.email_smtp_user.id_for_label }}" class="form-label">Email SMTP
+                                    User</label>
+                                {{ form.email_smtp_user }}
+                                {% if form.email_smtp_user.errors %}
+                                <div class="invalid-feedback d-block">{{ form.email_smtp_user.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted">Email yang akan digunakan untuk mengirim</small>
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.email_smtp_password.id_for_label }}" class="form-label">Email SMTP
+                                    Password</label>
+                                {{ form.email_smtp_password }}
+                                {% if form.email_smtp_password.errors %}
+                                <div class="invalid-feedback d-block">{{ form.email_smtp_password.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted">Untuk Gmail, gunakan App Password</small>
+                            </div>
+                            <div class="mb-3 col-md-12">
+                                <div class="form-check">
+                                    {{ form.email_use_tls }}
+                                    <label class="form-check-label" for="{{ form.email_use_tls.id_for_label }}">
+                                        Use TLS (Recommended)
+                                    </label>
+                                </div>
+                                {% if form.email_use_tls.errors %}
+                                <div class="invalid-feedback d-block">{{ form.email_use_tls.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Template Settings Card -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <h5 class="card-header">Email Template Settings</h5>
+                    <div class="card-body">
+                        <div class="alert alert-info" role="alert">
+                            <i class="ri-information-line me-1"></i>
+                            <strong>Kustomisasi Template Email:</strong><br>
+                            Anda dapat menggunakan placeholder berikut dalam template:<br>
+                            <code>{company_name}</code> - Nama perusahaan<br>
+                            <code>{user_email}</code> - Email penerima<br>
+                            <code>{reset_link}</code> - Link reset password (khusus forgot password)<br>
+                            <code>{verification_link}</code> - Link verifikasi (khusus register)
+                        </div>
+
+                        <!-- Common Template (Header & Footer) -->
+                        <h6 class="text-muted mt-3 mb-3">Template Umum (Berlaku untuk Semua Email)</h6>
+                        <div class="row">
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.email_header.id_for_label }}" class="form-label">Email
+                                    Header</label>
+                                {{ form.email_header }}
+                                {% if form.email_header.errors %}
+                                <div class="invalid-feedback d-block">{{ form.email_header.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted">Header yang muncul di awal email</small>
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ form.email_footer.id_for_label }}" class="form-label">Email
+                                    Footer</label>
+                                {{ form.email_footer }}
+                                {% if form.email_footer.errors %}
+                                <div class="invalid-feedback d-block">{{ form.email_footer.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted">Footer di akhir email. Gunakan {company_name}</small>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Forgot Password Template -->
+                        <h6 class="text-muted mb-3">Template Forgot Password</h6>
+                        <div class="row">
+                            <div class="mb-3 col-md-12">
+                                <label for="{{ form.forgot_password_subject.id_for_label }}" class="form-label">Subjek
+                                    Email</label>
+                                {{ form.forgot_password_subject }}
+                                {% if form.forgot_password_subject.errors %}
+                                <div class="invalid-feedback d-block">{{ form.forgot_password_subject.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3 col-md-12">
+                                <label for="{{ form.forgot_password_message.id_for_label }}" class="form-label">Pesan
+                                    Email</label>
+                                {{ form.forgot_password_message }}
+                                {% if form.forgot_password_message.errors %}
+                                <div class="invalid-feedback d-block">{{ form.forgot_password_message.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted">Gunakan <code>{reset_link}</code> untuk link reset
+                                    password</small>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Register/Verification Template -->
+                        <h6 class="text-muted mb-3">Template Register/Verifikasi Email</h6>
+                        <div class="row">
+                            <div class="mb-3 col-md-12">
+                                <label for="{{ form.register_subject.id_for_label }}" class="form-label">Subjek
+                                    Email</label>
+                                {{ form.register_subject }}
+                                {% if form.register_subject.errors %}
+                                <div class="invalid-feedback d-block">{{ form.register_subject.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3 col-md-12">
+                                <label for="{{ form.register_message.id_for_label }}" class="form-label">Pesan
+                                    Email</label>
+                                {{ form.register_message }}
+                                {% if form.register_message.errors %}
+                                <div class="invalid-feedback d-block">{{ form.register_message.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted">Gunakan <code>{verification_link}</code> untuk link
+                                    verifikasi</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="ri-save-line me-1"></i>Simpan Semua Pengaturan
+                        </button>
+                        <a href="{% url 'dashboard:index' %}" class="btn btn-outline-secondary">Batal</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    /**
+     * ==========================================================================
+     * PENGATURAN PERUSAHAAN - Script Inisialisasi Form
+     * ==========================================================================
+     * Script ini menambahkan class Bootstrap ke field-field form yang di-render
+     * oleh Django secara otomatis (tanpa class). Dikelompokkan per section:
+     *
+     * 1. Identitas Perusahaan (nama, telepon, email, dll)
+     * 2. Pengaturan Meta Sistem (judul, deskripsi, keywords, logo, favicon)
+     * 3. Email/SMTP (host, port, user, password)
+     * 4. Template Email (header, footer, forgot password, register)
+     * ==========================================================================
+     */
+
+    /**
+     * Helper: Tambah class ke elemen berdasarkan ID (aman jika elemen tidak ada)
+     * @param {string} id - ID elemen HTML
+     * @param {string} className - Class CSS yang akan ditambahkan
+     */
+    function tambahClass(id, className) {
+        var el = document.getElementById(id);
+        if (el) el.classList.add(className);
+        return el;
+    }
+
+    /**
+     * Helper: Set atribut pada elemen berdasarkan ID (aman jika elemen tidak ada)
+     * @param {string} id - ID elemen HTML
+     * @param {string} attr - Nama atribut
+     * @param {*} value - Nilai atribut
+     */
+    function setAttr(id, attr, value) {
+        var el = document.getElementById(id);
+        if (el) el[attr] = value;
+    }
+
+    // ── 1. Identitas Perusahaan ──────────────────────────────────────
+    // Semua input text, email, textarea pada bagian identitas perusahaan
+    tambahClass('id_nama_perusahaan', 'form-control');
+    tambahClass('id_telepon', 'form-control');
+    tambahClass('id_email', 'form-control');
+    tambahClass('id_website', 'form-control');
+    tambahClass('id_alamat', 'form-control');
+    tambahClass('id_pajak_default', 'form-control');
+    tambahClass('id_logo', 'form-control');
+
+    // ── 2. Pengaturan Meta Sistem ────────────────────────────────────
+    // Field yang mengontrol judul, deskripsi SEO, keywords, logo & favicon
+    tambahClass('id_system_title', 'form-control');
+    tambahClass('id_system_description', 'form-control');
+    setAttr('id_system_description', 'rows', 3); // Textarea tidak terlalu tinggi
+    tambahClass('id_system_keywords', 'form-control');
+    tambahClass('id_system_logo', 'form-control');
+    tambahClass('id_system_favicon', 'form-control');
+    // Checkbox maintenance mode — gunakan class form-check-input untuk styling Bootstrap
+    tambahClass('id_maintenance_mode', 'form-check-input');
+    tambahClass('id_maintenance_message', 'form-control');
+    setAttr('id_maintenance_message', 'rows', 3); // Textarea tidak terlalu tinggi
+
+    // ── 3. Email/SMTP Settings ───────────────────────────────────────
+    // Konfigurasi SMTP untuk kirim email (forgot password, register)
+    tambahClass('id_email_smtp_host', 'form-control');
+    tambahClass('id_email_smtp_port', 'form-control');
+    tambahClass('id_email_smtp_user', 'form-control');
+    tambahClass('id_email_smtp_password', 'form-control');
+    setAttr('id_email_smtp_password', 'type', 'password'); // Sembunyikan password
+    // Checkbox TLS — gunakan class form-check-input untuk styling Bootstrap
+    tambahClass('id_email_use_tls', 'form-check-input');
+
+    // ── 4. Template Email ────────────────────────────────────────────
+    // Template pesan untuk forgot password dan register/verifikasi
+    tambahClass('id_email_header', 'form-control');
+    tambahClass('id_email_footer', 'form-control');
+    tambahClass('id_forgot_password_subject', 'form-control');
+    tambahClass('id_forgot_password_message', 'form-control');
+    setAttr('id_forgot_password_message', 'rows', 6); // Textarea lebih tinggi
+    tambahClass('id_register_subject', 'form-control');
+    tambahClass('id_register_message', 'form-control');
+    setAttr('id_register_message', 'rows', 6); // Textarea lebih tinggi
+</script>
+{% endblock content %}

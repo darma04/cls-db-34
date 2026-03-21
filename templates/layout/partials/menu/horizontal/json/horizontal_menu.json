@@ -1,0 +1,38 @@
+{
+  "menu": [
+    {
+      "url": "dashboard:index",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons ri-home-smile-line",
+      "slug": "dashboard"
+    },
+    {
+      "name": "Manajemen Lisensi",
+      "icon": "menu-icon tf-icons ri-key-2-line",
+      "slug": "licenses",
+      "submenu": [
+        {
+          "url": "admin:licenses_product_changelist",
+          "name": "Data Produk",
+          "slug": "licenses-product"
+        },
+        {
+          "url": "admin:licenses_client_changelist",
+          "name": "Data Klien",
+          "slug": "licenses-client"
+        },
+        {
+          "url": "admin:licenses_licensekey_changelist",
+          "name": "Kunci Lisensi",
+          "slug": "licenses-keys"
+        }
+      ]
+    },
+    {
+      "url": "user_management:index",
+      "name": "Manajemen User",
+      "icon": "menu-icon tf-icons ri-user-settings-line",
+      "slug": "users"
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+{% extends 'layout/layout_vertical.html' %}
+{% load static humanize %}
+{% block title %}Laporan Pemasukan - SIMKOS{% endblock title %}
+{% block vendor_css %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-bs5/datatables.bootstrap5.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/flatpickr/flatpickr.css' %}" />
+{% endblock vendor_css %}
+{% block vendor_js %}{{ block.super }}
+<script src="{% static 'vendor/libs/datatables-bs5/datatables-bootstrap5.js' %}"></script>
+<script src="{% static 'vendor/libs/flatpickr/flatpickr.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="{% static 'js/simkos_export.js' %}"></script>
+{% endblock vendor_js %}
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div><h4 class="mb-1"><i class="ri-money-dollar-circle-line me-2"></i>Laporan Pemasukan</h4><p class="text-muted mb-0">Riwayat pemasukan dari pembayaran sewa</p></div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get">
+            <div class="row g-3">
+                <div class="col-md-3"><label class="form-label">Dari Tanggal</label><input type="text" name="start_date" class="form-control flatpickr-input" id="startDate" value="{{ start_date }}" placeholder="Pilih tanggal"></div>
+                <div class="col-md-3"><label class="form-label">Sampai Tanggal</label><input type="text" name="end_date" class="form-control flatpickr-input" id="endDate" value="{{ end_date }}" placeholder="Pilih tanggal"></div>
+                <div class="col-md-3"><label class="form-label">Penyewa</label><select name="penyewa" class="form-select"><option value="">Semua Penyewa</option>{% for p in penyewa_list %}<option value="{{ p.id }}" {% if filter_penyewa == p.id|stringformat:"d" %}selected{% endif %}>{{ p.nama }}</option>{% endfor %}</select></div>
+                <div class="col-md-3"></div>
+            </div>
+            <div class="row g-3 mt-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Pilih Kolom</label>
+                    <div class="dropdown">
+                        <button class="btn btn-label-secondary dropdown-toggle waves-effect w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"><i class="ri-layout-column-line me-1"></i>Pilih Kolom yang Ditampilkan</button>
+                        <div class="dropdown-menu p-3" style="min-width: 280px;">
+                            <h6 class="dropdown-header px-0 mb-2">Kolom Tabel</h6>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="0" checked onchange="toggleColumns()"><label class="form-check-label">No. Pembayaran</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="1" checked onchange="toggleColumns()"><label class="form-check-label">Penyewa</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="2" checked onchange="toggleColumns()"><label class="form-check-label">Tanggal</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="3" checked onchange="toggleColumns()"><label class="form-check-label">Jumlah</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="4" checked onchange="toggleColumns()"><label class="form-check-label">Metode</label></div>
+                            <div class="dropdown-divider my-2"></div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-primary flex-fill" type="button" onclick="selectAllColumns()"><i class="ri-checkbox-multiple-line ri-16px"></i> Semua</button>
+                                <button class="btn btn-sm btn-label-secondary flex-fill" type="button" onclick="deselectAllColumns()"><i class="ri-checkbox-blank-line ri-16px"></i> Kosongkan</button>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-1">Klik untuk memilih kolom</small>
+                </div>
+                <div class="col-md-6"></div>
+                <div class="col-md-3"><div class="d-grid gap-2"><button type="submit" class="btn btn-primary"><i class="ri-filter-3-line me-1"></i>Terapkan Filter</button><a href="{% url 'laporan:pemasukan' %}" class="btn btn-label-secondary"><i class="ri-refresh-line me-1"></i>Reset</a></div></div>
+            </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div><p class="text-muted mb-1">Total Pemasukan</p><h4 class="mb-0 text-success">Rp {{ total_pemasukan|floatformat:0|intcomma }}</h4></div>
+                        <div class="avatar"><span class="avatar-initial rounded bg-label-success"><i class="ri-arrow-up-circle-line ri-24px"></i></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div><p class="text-muted mb-1">Total Transaksi</p><h4 class="mb-0">{{ total_transaksi }}</h4></div>
+                        <div class="avatar"><span class="avatar-initial rounded bg-label-primary"><i class="ri-exchange-line ri-24px"></i></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Card -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="ri-list-check-2 me-2"></i>Rincian Pemasukan</h5>
+            <div class="d-flex gap-2">
+                <button class="btn btn-label-success" onclick="exportExcel()"><i class="ri-file-excel-2-line me-1"></i>Export Excel</button>
+                <button class="btn btn-label-danger" onclick="exportPDF()"><i class="ri-file-pdf-line me-1"></i>Export PDF</button>
+            </div>
+        </div>
+        <div class="card-datatable table-responsive">
+            <table class="table table-hover" id="dataTable">
+                <thead><tr><th>No. Pembayaran</th><th>Penyewa</th><th>Tanggal</th><th>Jumlah</th><th>Metode</th></tr></thead>
+                <tbody>
+                    {% for b in pembayaran_list %}
+                    <tr><td class="fw-medium">{{ b.nomor_pembayaran }}</td><td>{{ b.tagihan.kontrak.penyewa.nama }}</td><td>{{ b.tanggal_bayar|date:"d/m/Y" }}</td><td class="fw-bold text-success">Rp {{ b.jumlah_bayar|floatformat:0|intcomma }}</td><td><span class="badge bg-label-info rounded-pill">{{ b.nama_metode_bayar }}</span></td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-footer-summary">
+                    <tr>
+                        <td colspan="3" class="text-start ps-4 py-3" style="vertical-align: middle;">
+                            <div class="d-flex align-items-center"><i class="ri-calculator-line me-2 text-primary" style="font-size: 1.5rem;"></i><div class="text-start"><strong class="d-block" style="font-size: 1rem;">RINGKASAN</strong><small class="text-muted" style="font-size: 0.75rem;">{{ total_transaksi }} Transaksi</small></div></div>
+                        </td>
+                        <td class="py-3" style="vertical-align: middle;"><div class="d-flex flex-column align-items-center"><span class="badge bg-label-success d-flex align-items-center gap-1 mb-2" style="font-size: 0.9rem; padding: 0.5rem 0.75rem; min-width: 120px;"><i class="ri-money-dollar-circle-line"></i><span>Rp {{ total_pemasukan|floatformat:0|intcomma }}</span></span><small class="text-muted fw-medium" style="font-size: 0.75rem;">Total Pemasukan</small></div></td>
+                        <td class="py-3"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+{% block page_js %}
+<script>
+var dataTable;
+$(document).ready(function(){
+    flatpickr('#startDate', { dateFormat: 'Y-m-d' });
+    flatpickr('#endDate', { dateFormat: 'Y-m-d' });
+    {% if pembayaran_list %}
+    dataTable = $('#dataTable').DataTable({
+        language:{sSearch:"Cari:",sLengthMenu:"Tampilkan _MENU_ data",sInfo:"Menampilkan _START_ sampai _END_ dari _TOTAL_ data",sInfoEmpty:"Menampilkan 0 sampai 0 dari 0 data",sZeroRecords:"Tidak ditemukan",oPaginate:{sNext:"Selanjutnya",sPrevious:"Sebelumnya"}},
+        order:[[2,'desc']],pageLength:25,lengthMenu:[[10,25,50,-1],['10','25','50','Semua']],responsive:false,
+        dom:'<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>><"table-responsive"rt><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+    });
+    {% endif %}
+});
+
+// ── KONFIGURASI EXPORT PEMASUKAN ──
+// Kolom: 0=No.Pembayaran, 1=Penyewa, 2=Tanggal, 3=Jumlah, 4=Metode
+var EXCEL_INFO = {
+    name: "{{ export_excel_template.header_nama_perusahaan|escapejs|default:'Central License Server' }}",
+    address: "{{ export_excel_template.header_alamat|escapejs|default:'-' }}",
+    phone: "{{ export_excel_template.header_telepon|escapejs|default:'-' }}",
+    email: "{{ export_excel_template.header_email|escapejs|default:'-' }}",
+    copyright: "{{ export_excel_template.footer_copyright|escapejs|default:'\u00a9 2026 Central License Server' }}"
+};
+var PDF_INFO = {
+    name: "{{ export_pdf_template.header_nama_perusahaan|escapejs|default:'Central License Server' }}",
+    address: "{{ export_pdf_template.header_alamat|escapejs|default:'-' }}",
+    phone: "{{ export_pdf_template.header_telepon|escapejs|default:'-' }}",
+    email: "{{ export_pdf_template.header_email|escapejs|default:'-' }}",
+    copyright: "{{ export_pdf_template.footer_copyright|escapejs|default:'\u00a9 2026 Central License Server' }}"
+};
+// footerData: kolom 3 = Jumlah (nilai total pemasukan sebagai angka murni)
+var FOOTER_DATA  = { 3: {{ total_pemasukan|floatformat:0|default:0 }} };
+var FOOTER_LABEL = 'RINGKASAN ({{ total_transaksi }} Transaksi Pemasukan)';
+
+function toggleColumns() { SimkosExport.toggleColumns('#dataTable'); }
+function selectAllColumns() { document.querySelectorAll('.column-checkbox').forEach(function(cb){cb.checked=true;}); toggleColumns(); }
+function deselectAllColumns() { document.querySelectorAll('.column-checkbox').forEach(function(cb){cb.checked=false;}); toggleColumns(); }
+function exportExcel() { SimkosExport.buildExcel('#dataTable', EXCEL_INFO, FOOTER_DATA, FOOTER_LABEL, 'LAPORAN PEMASUKAN', 'Laporan_Pemasukan'); }
+function exportPDF()   { SimkosExport.buildPDF('#dataTable',   PDF_INFO,   FOOTER_DATA, FOOTER_LABEL, 'LAPORAN PEMASUKAN', 'Laporan_Pemasukan'); }
+</script>
+{% endblock page_js %}

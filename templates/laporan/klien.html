@@ -1,0 +1,390 @@
+{% extends 'layout/layout_vertical.html' %}
+{% load static humanize %}
+{% block title %}Laporan Klien - Central License Server{% endblock title %}
+{% block vendor_css %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-bs5/datatables.bootstrap5.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/apex-charts/apex-charts.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/flatpickr/flatpickr.css' %}" />
+{% endblock vendor_css %}
+{% block vendor_js %}{{ block.super }}
+<script src="{% static 'vendor/libs/datatables-bs5/datatables-bootstrap5.js' %}"></script>
+<script src="{% static 'vendor/libs/apex-charts/apexcharts.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="{% static 'vendor/libs/flatpickr/flatpickr.js' %}"></script>
+<script src="{% static 'js/simkos_export.js' %}"></script>
+{% endblock vendor_js %}
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div><h4 class="mb-1"><i class="ri-team-line me-2"></i>Laporan Klien</h4><p class="text-muted mb-0">Statistik klien dan distribusi lisensi</p></div>
+
+    </div>
+
+    <!-- Filter Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" id="filterForm">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Cari Klien (Tabel)</label>
+                    <input type="text" class="form-control" id="searchKlien" placeholder="Nama klien, email, atau telepon">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Dari Tanggal Dibuat</label>
+                    <input type="text" name="start_date" class="form-control flatpickr-input" id="startDate" value="{{ start_date }}" placeholder="Pilih tanggal mulai">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Sampai Tanggal Dibuat</label>
+                    <input type="text" name="end_date" class="form-control flatpickr-input" id="endDate" value="{{ end_date }}" placeholder="Pilih tanggal akhir">
+                </div>
+            </div>
+
+            <div class="row g-3 mt-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Pilih Kolom</label>
+                    <div class="dropdown">
+                        <button class="btn btn-label-secondary dropdown-toggle waves-effect w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"><i class="ri-layout-column-line me-1"></i>Pilih Kolom</button>
+                        <div class="dropdown-menu p-3" style="min-width: 280px;">
+                            <h6 class="dropdown-header px-0 mb-2">Kolom Tabel</h6>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="0" checked onchange="toggleColumns()"><label class="form-check-label">Klien</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="1" checked onchange="toggleColumns()"><label class="form-check-label">Email</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="2" checked onchange="toggleColumns()"><label class="form-check-label">Telepon</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="3" checked onchange="toggleColumns()"><label class="form-check-label">Total Lisensi</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="4" checked onchange="toggleColumns()"><label class="form-check-label">Lisensi Aktif</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="5" checked onchange="toggleColumns()"><label class="form-check-label">Rasio Aktif</label></div>
+                            <div class="dropdown-divider my-2"></div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-primary flex-fill" type="button" onclick="selectAllColumns()"><i class="ri-checkbox-multiple-line ri-16px"></i> Semua</button>
+                                <button class="btn btn-sm btn-label-secondary flex-fill" type="button" onclick="deselectAllColumns()"><i class="ri-checkbox-blank-line ri-16px"></i> Kosongkan</button>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-1">Klik untuk memilih kolom</small>
+                </div>
+                <div class="col-md-6"></div>
+                <div class="col-md-3">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" onclick="applySearch()"><i class="ri-filter-3-line me-1"></i>Terapkan Filter</button>
+                        <a href="?" class="btn btn-label-secondary"><i class="ri-refresh-line me-1"></i>Reset</a>
+                    </div>
+                </div>
+            </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div><p class="text-muted mb-1">Total Klien</p><h4 class="mb-0">{{ total_klien }}</h4><small class="text-muted">terdaftar</small></div>
+                        <div class="avatar"><span class="avatar-initial rounded bg-label-primary"><i class="ri-team-line ri-24px"></i></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div><p class="text-muted mb-1">Total Lisensi</p><h4 class="mb-0 text-info">{{ total_lisensi_all }}</h4><small class="text-info"><i class="ri-key-2-line"></i> seluruh klien</small></div>
+                        <div class="avatar"><span class="avatar-initial rounded bg-label-info"><i class="ri-key-2-line ri-24px"></i></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div><p class="text-muted mb-1">Lisensi Aktif</p><h4 class="mb-0 text-success">{{ total_lisensi_aktif }}</h4><small class="text-success"><i class="ri-arrow-up-s-line"></i> {% widthratio total_lisensi_aktif total_lisensi_all 100 %}% dari total</small></div>
+                        <div class="avatar"><span class="avatar-initial rounded bg-label-success"><i class="ri-checkbox-circle-line ri-24px"></i></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div><p class="text-muted mb-1">Rasio Aktif</p><h4 class="mb-0 text-primary">{{ rasio_aktif }}%</h4><small class="text-muted">lisensi yang masih aktif</small></div>
+                        <div class="avatar"><span class="avatar-initial rounded bg-label-primary"><i class="ri-pie-chart-line ri-24px"></i></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header pb-1">
+                    <h5 class="mb-0"><i class="ri-pie-chart-2-line me-2 text-primary"></i>Statistik Lisensi</h5>
+                    <small class="text-muted">Status seluruh lisensi</small>
+                </div>
+                <div class="card-body pt-2 d-flex flex-column justify-content-center">
+                    <div id="hunianDonutChart" style="min-height: 280px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header pb-1">
+                    <h5 class="mb-0"><i class="ri-bar-chart-horizontal-line me-2 text-info"></i>Lisensi Aktif per Klien</h5>
+                    <small class="text-muted">Top klien berdasarkan lisensi aktif</small>
+                </div>
+                <div class="card-body pt-2">
+                    <div style="position:relative;height:280px"><canvas id="hunianBarCanvas"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Table Card -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="ri-list-check-2 me-2"></i>Detail Klien</h5>
+            <div class="d-flex gap-2">
+                <button class="btn btn-label-success" onclick="exportExcel()"><i class="ri-file-excel-2-line me-1"></i>Export Excel</button>
+                <button class="btn btn-label-danger" onclick="exportPDF()"><i class="ri-file-pdf-line me-1"></i>Export PDF</button>
+            </div>
+        </div>
+        <div class="card-datatable table-responsive">
+            <table class="table table-hover" id="dataTable">
+                <thead><tr><th>Klien</th><th>Email</th><th>Telepon</th><th>Total Lisensi</th><th>Lisensi Aktif</th><th>Rasio Aktif</th></tr></thead>
+                <tbody>
+                    {% for d in klien_list %}
+                    <tr>
+                        <td><strong>{{ d.name }}</strong></td>
+                        <td>{{ d.email|default:"-" }}</td>
+                        <td>{{ d.phone|default:"-" }}</td>
+                        <td><span class="badge bg-label-info">{{ d.total_lisensi }}</span></td>
+                        <td><span class="badge bg-label-success">{{ d.lisensi_aktif }}</span></td>
+                        <td>
+                            {% if d.total_lisensi > 0 %}
+                            <div class="d-flex align-items-center">
+                                <div class="progress w-100 me-2" style="height:8px"><div class="progress-bar {% if d.lisensi_aktif <= 0 %}bg-danger{% else %}bg-success{% endif %}" style="width:{% widthratio d.lisensi_aktif d.total_lisensi 100 %}%"></div></div>
+                                <span class="fw-bold">{% widthratio d.lisensi_aktif d.total_lisensi 100 %}%</span>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">0%</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-footer-summary">
+                    <tr>
+                        <td colspan="3" class="text-start ps-4 py-3" style="vertical-align: middle;">
+                            <div class="d-flex align-items-center"><i class="ri-calculator-line me-2 text-primary" style="font-size: 1.5rem;"></i><div class="text-start"><strong class="d-block" style="font-size: 1rem;">RINGKASAN</strong><small class="text-muted" style="font-size: 0.75rem;">{{ total_klien }} Klien</small></div></div>
+                        </td>
+                        <td class="py-3" style="vertical-align: middle;"><div class="d-flex flex-column align-items-center"><span class="badge bg-label-info d-flex align-items-center gap-1 mb-1" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;"><span>{{ total_lisensi_all }}</span></span><small class="text-muted" style="font-size: 0.7rem;">Total Lisensi</small></div></td>
+                        <td class="py-3" style="vertical-align: middle;"><div class="d-flex flex-column align-items-center"><span class="badge bg-label-success d-flex align-items-center gap-1 mb-1" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;"><span>{{ total_lisensi_aktif }}</span></span><small class="text-muted" style="font-size: 0.7rem;">Aktif</small></div></td>
+                        <td class="py-3" style="vertical-align: middle;"><div class="d-flex flex-column align-items-center"><span class="badge bg-label-primary d-flex align-items-center gap-1 mb-1" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;"><span>{{ rasio_aktif }}%</span></span><small class="text-muted" style="font-size: 0.7rem;">Rasio</small></div></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+{% block page_js %}
+<script>
+var dataTable;
+$(document).ready(function(){
+    dataTable = $('#dataTable').DataTable({
+        language:{sSearch:"Cari:",sLengthMenu:"Tampilkan _MENU_ data",sInfo:"Menampilkan _START_ sampai _END_ dari _TOTAL_ data",sInfoEmpty:"Menampilkan 0 sampai 0 dari 0 data",sZeroRecords:"Tidak ditemukan",oPaginate:{sNext:"Selanjutnya",sPrevious:"Sebelumnya"}},
+        pageLength:25,ordering:true,responsive:false,
+        dom:'<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>><"table-responsive"rt><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+    });
+
+    flatpickr('#startDate', { dateFormat: 'Y-m-d' });
+    flatpickr('#endDate', { dateFormat: 'Y-m-d' });
+
+    // === Donut Chart: Statistik Lisensi ===
+    if (typeof ApexCharts !== 'undefined') {
+        var isDarkDonut = document.documentElement.classList.contains('dark-style') ||
+                     document.body.classList.contains('dark-style') ||
+                     window.getComputedStyle(document.body).backgroundColor.includes('rgb(35') ||
+                     window.getComputedStyle(document.body).backgroundColor.includes('rgb(40');
+        var cardBgColor = isDarkDonut ? '#283046' : '#fff';
+        var primaryColor = '#7367f0';
+        var successColor = '#28c76f';
+        var dangerColor = '#ea5455';
+        var warningColor = '#ff9f43';
+        var infoColor = '#00cfe8';
+        var labelColor = isDarkDonut ? 'rgba(255,255,255,0.6)' : '#6e6b7b';
+        var gridColor = isDarkDonut ? 'rgba(255,255,255,0.1)' : '#ebe9f1';
+
+        var headingColor = isDarkDonut ? '#d0d2d6' : '#5e5873';
+
+        new ApexCharts(document.querySelector("#hunianDonutChart"), {
+            series: [{{ total_lisensi_aktif }}, {{ total_lisensi_nonaktif }}],
+            chart: {
+                type: 'donut',
+                height: 355,
+                fontFamily: '"Inter", sans-serif',
+                parentHeightOffset: 0
+            },
+            labels: ['Aktif', 'Nonaktif/Suspended'],
+            colors: ['#ff9f43', '#fdb528cc'],
+            plotOptions: {
+                pie: {
+                    endAngle: 130,
+                    startAngle: -130,
+                    customScale: 0.9,
+                    donut: {
+                        size: '83%',
+                        labels: {
+                            show: true,
+                            name: {
+                                offsetY: 25,
+                                fontSize: '0.9375rem',
+                                fontFamily: 'Inter',
+                                color: labelColor
+                            },
+                            value: {
+                                offsetY: -15,
+                                fontWeight: 500,
+                                fontSize: '1.75rem',
+                                fontFamily: 'Inter',
+                                color: headingColor,
+                                formatter: function(val) { return val; }
+                            },
+                            total: {
+                                show: true,
+                                label: 'Total Lisensi',
+                                fontSize: '0.9375rem',
+                                fontFamily: 'Inter',
+                                color: labelColor,
+                                formatter: function(w) { return w.globals.seriesTotals.reduce(function(a,b){return a+b;},0); }
+                            }
+                        }
+                    }
+                }
+            },
+            tooltip: { enabled: false },
+            dataLabels: { enabled: false },
+            stroke: {
+                width: 3,
+                lineCap: 'round',
+                colors: [cardBgColor]
+            },
+            states: {
+                hover: { filter: { type: 'none' } },
+                active: { filter: { type: 'none' } }
+            },
+            legend: {
+                position: 'bottom',
+                fontFamily: 'Inter',
+                fontSize: '15px',
+                markers: { offsetX: -5 },
+                itemMargin: { horizontal: 24, vertical: 8 },
+                labels: { colors: headingColor }
+            },
+            responsive: [{ breakpoint: 480, options: { chart: { height: 240 } } }]
+        }).render();
+
+        // === Bar Chart: Lisensi Aktif per Klien (Chart.js) ===
+        var propNames = [{% for d in top_klien %}'{{ d.name|truncatechars:15|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+        var propHunian = [{% for d in top_klien %}{{ d.lisensi_aktif }}{% if not forloop.last %},{% endif %}{% endfor %}];
+        var isDark = document.documentElement.classList.contains('dark-style') ||
+                     document.body.classList.contains('dark-style') ||
+                     window.getComputedStyle(document.body).backgroundColor.includes('rgb(35') ||
+                     window.getComputedStyle(document.body).backgroundColor.includes('rgb(40');
+        var chartGridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
+        var chartTickColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)';
+
+        var barEl = document.getElementById('hunianBarCanvas');
+        if (barEl) {
+            new Chart(barEl.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: propNames,
+                    datasets: [{
+                        label: 'Total Lisensi Aktif',
+                        data: propHunian,
+                        backgroundColor: 'rgba(40, 199, 111, 0.75)',
+                        borderColor: '#28c76f',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        barPercentage: 0.55,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            padding: 10,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(ctx) {
+                                    return ctx.parsed.y + ' Lisensi';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: chartTickColor,
+                                callback: function(val) {
+                                    return val;
+                                }
+                            },
+                            grid: { color: chartGridColor }
+                        },
+                        x: {
+                            ticks: { color: chartTickColor },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+    }
+});
+function toggleColumns() { SimkosExport.toggleColumns('#dataTable'); }
+function selectAllColumns(){document.querySelectorAll('.column-checkbox').forEach(cb=>{cb.checked=true;});toggleColumns();}
+function deselectAllColumns(){document.querySelectorAll('.column-checkbox').forEach(cb=>{cb.checked=false;});toggleColumns();}
+function applySearch() { 
+    const e = document.getElementById('searchKlien').value; 
+    if(dataTable) { dataTable.search(e).draw(); } 
+}
+
+// Konfigurasi Export Laporan Klien
+// Kolom: 0=Klien, 1=Email, 2=Telepon, 3=Total Lisensi, 4=Lisensi Aktif, 5=Rasio
+// Kolom 3,4,5 bukan nominal tapi angka total — tampilkan di FOOTER_DATA agar berada di kolom yang tepat
+var EXCEL_INFO = {
+    name: "{{ export_excel_template.header_nama_perusahaan|escapejs|default:'Central License Server' }}",
+    address: "{{ export_excel_template.header_alamat|escapejs|default:'-' }}",
+    phone: "{{ export_excel_template.header_telepon|escapejs|default:'-' }}",
+    email: "{{ export_excel_template.header_email|escapejs|default:'-' }}",
+    copyright: "{{ export_excel_template.footer_copyright|escapejs|default:'\u00a9 2026 Central License Server' }}"
+};
+var PDF_INFO = {
+    name: "{{ export_pdf_template.header_nama_perusahaan|escapejs|default:'Central License Server' }}",
+    address: "{{ export_pdf_template.header_alamat|escapejs|default:'-' }}",
+    phone: "{{ export_pdf_template.header_telepon|escapejs|default:'-' }}",
+    email: "{{ export_pdf_template.header_email|escapejs|default:'-' }}",
+    copyright: "{{ export_pdf_template.footer_copyright|escapejs|default:'\u00a9 2026 Central License Server' }}"
+};
+var FOOTER_DATA  = { 3: '{{ total_lisensi_all }}', 4: '{{ total_lisensi_aktif }}', 5: '{{ rasio_aktif }}%' };
+var FOOTER_LABEL = 'RINGKASAN ({{ total_klien }} Klien)';
+// moneyColumns = [] → tidak ada kolom uang di tabel, semua angka biasa
+var MONEY_COLS   = [];
+function exportExcel() { SimkosExport.buildExcel('#dataTable', EXCEL_INFO, FOOTER_DATA, FOOTER_LABEL, 'LAPORAN KLIEN', 'Laporan_Klien', MONEY_COLS); }
+function exportPDF()   { SimkosExport.buildPDF('#dataTable',   PDF_INFO,   FOOTER_DATA, FOOTER_LABEL, 'LAPORAN KLIEN', 'Laporan_Klien', MONEY_COLS); }
+</script>
+{% endblock page_js %}

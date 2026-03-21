@@ -1,0 +1,158 @@
+{
+  "menu": [
+    {
+      "url": "dashboard:index",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons ri-home-smile-line",
+      "slug": "dashboard"
+    },
+    {
+      "menu_header": "LISENSI & PRODUK"
+    },
+    {
+      "name": "Manajemen Lisensi",
+      "icon": "menu-icon tf-icons ri-key-2-line",
+      "slug": "licenses",
+      "submenu": [
+        {
+          "url": "licenses_ui:product_list",
+          "name": "Data Produk",
+          "slug": "licenses-product"
+        },
+        {
+          "url": "licenses_ui:client_list",
+          "name": "Data Klien",
+          "slug": "licenses-client"
+        },
+        {
+          "url": "licenses_ui:licensekey_list",
+          "name": "Kunci Lisensi",
+          "slug": "licenses-keys"
+        }
+      ]
+    },
+    {
+      "url": "pembelian:pembelian_list",
+      "name": "Pembelian Lisensi",
+      "icon": "menu-icon tf-icons ri-shopping-cart-2-line",
+      "slug": "pembelian"
+    },
+    {
+      "menu_header": "LAPORAN & AI"
+    },
+    {
+      "name": "Laporan",
+      "icon": "menu-icon tf-icons ri-bar-chart-2-line",
+      "slug": "laporan",
+      "submenu": [
+        {
+          "url": "laporan:lisensi",
+          "name": "Laporan Lisensi",
+          "slug": "laporan-lisensi"
+        },
+        {
+          "url": "laporan:klien",
+          "name": "Laporan Klien",
+          "slug": "laporan-klien"
+        },
+        {
+          "url": "laporan:pendapatan",
+          "name": "Laporan Pendapatan",
+          "slug": "laporan-pendapatan"
+        },
+        {
+          "url": "laporan:keuangan",
+          "name": "Laporan Keuangan",
+          "slug": "laporan-keuangan"
+        }
+      ]
+    },
+    {
+      "name": "AI Manajemen",
+      "icon": "menu-icon tf-icons ri-robot-line",
+      "slug": "ai-assistant",
+      "submenu": [
+        {
+          "url": "ai_assistant:index",
+          "name": "Chat AI",
+          "slug": "ai-chat"
+        },
+        {
+          "url": "ai_assistant:dashboard",
+          "name": "Dashboard AI",
+          "slug": "ai-dashboard"
+        }
+      ]
+    },
+    {
+      "menu_header": "SISTEM"
+    },
+    {
+      "url": "user_management:index",
+      "name": "Manajemen User",
+      "icon": "menu-icon tf-icons ri-user-settings-line",
+      "slug": "users"
+    },
+    {
+      "url": "permission_management:role_list",
+      "name": "Access Control",
+      "icon": "menu-icon tf-icons ri-shield-user-line",
+      "slug": "access-control"
+    },
+    {
+      "url": "activity_log:index",
+      "name": "Log Aktivitas",
+      "icon": "menu-icon tf-icons ri-history-line",
+      "slug": "activity-log"
+    },
+    {
+      "name": "Telegram",
+      "icon": "menu-icon tf-icons ri-telegram-line",
+      "slug": "automation",
+      "submenu": [
+        {
+          "url": "automation:pengaturan_telegram",
+          "name": "Pengaturan Bot",
+          "slug": "automation-settings"
+        },
+        {
+          "url": "automation:template_pesan_list",
+          "name": "Template Pesan",
+          "slug": "automation-templates"
+        },
+        {
+          "url": "automation:log_notifikasi",
+          "name": "Log Notifikasi",
+          "slug": "automation-logs"
+        }
+      ]
+    },
+    {
+      "name": "Pengaturan",
+      "icon": "menu-icon tf-icons ri-settings-3-line",
+      "slug": "pengaturan",
+      "submenu": [
+        {
+          "url": "pengaturan:profil",
+          "name": "Profil",
+          "slug": "pengaturan-profil"
+        },
+        {
+          "url": "pengaturan:perusahaan",
+          "name": "Perusahaan",
+          "slug": "pengaturan-perusahaan"
+        },
+        {
+          "url": "pengaturan:template_cetak_list",
+          "name": "Template Cetak",
+          "slug": "pengaturan-template"
+        },
+        {
+          "url": "pengaturan:manajemen_data",
+          "name": "Manajemen Data",
+          "slug": "pengaturan-data"
+        }
+      ]
+    }
+  ]
+}

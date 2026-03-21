@@ -1,0 +1,222 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   LAPORAN PENJUALAN DETAIL - Detail Laporan Penjualan
+   Halaman detail laporan penjualan per Sales Order/Transaksi.
+   Info: daftar item, total, customer, status.
+   ==========================================================================
+{% endcomment %}
+{% load static %}
+{% load currency_filters %}
+
+{% block title %}Detail Sales Order - {{ sales_order.nomor_so }} - ERP{% endblock title %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="ri-shopping-cart-line me-2"></i>Detail Sales Order: {{ sales_order.nomor_so }}</h4>
+            <p class="text-muted mb-0">Informasi lengkap penjualan dengan riwayat aktivitas</p>
+        </div>
+        <a href="{% url 'laporan:penjualan' %}" class="btn btn-label-secondary">
+            <i class="ri-arrow-left-line me-1"></i> Kembali
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Informasi SO -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="ri-information-line me-2"></i>Informasi Sales Order</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="40%"><i class="ri-file-list-line me-1 text-primary"></i> No. SO</th>
+                            <td><code class="fs-6">{{ sales_order.nomor_so }}</code></td>
+                        </tr>
+                        <tr>
+                            <th><i class="ri-calendar-line me-1 text-primary"></i> Tanggal</th>
+                            <td>{{ sales_order.tanggal|date:"d M Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th><i class="ri-user-heart-line me-1 text-primary"></i> Customer</th>
+                            <td><strong>{{ sales_order.customer.nama }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th><i class="ri-building-line me-1 text-primary"></i> Gudang</th>
+                            <td><span class="badge bg-label-info">{{ sales_order.gudang.nama }}</span></td>
+                        </tr>
+                        <tr>
+                            <th><i class="ri-flag-line me-1 text-primary"></i> Status</th>
+                            <td>
+                                {% if sales_order.status == 'draft' %}
+                                <span class="badge bg-secondary">Draft</span>
+                                {% elif sales_order.status == 'confirmed' %}
+                                <span class="badge bg-primary">Dikonfirmasi</span>
+                                {% elif sales_order.status == 'delivered' %}
+                                <span class="badge bg-info">Dikirim</span>
+                                {% elif sales_order.status == 'completed' %}
+                                <span class="badge bg-success">Selesai</span>
+                                {% else %}
+                                <span class="badge bg-danger">Dibatalkan</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><i class="ri-user-add-line me-1 text-info"></i> Dibuat Oleh</th>
+                            <td>
+                                {% if sales_order.dibuat_oleh %}
+                                <span class="badge bg-label-info">{{ sales_order.dibuat_oleh.username }}</span>
+                                {% else %}
+                                <span class="text-muted">System</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><i class="ri-time-line me-1 text-muted"></i> Dibuat Pada</th>
+                            <td>{{ sales_order.dibuat_pada|date:"d M Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th><i class="ri-refresh-line me-1 text-warning"></i> Terakhir Diupdate</th>
+                            <td>{{ sales_order.diupdate_pada|date:"d M Y H:i" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ringkasan Harga -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="ri-money-dollar-circle-line me-2"></i>Rincian Harga</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="40%">Subtotal</th>
+                            <td class="text-end"><strong>{{ sales_order.subtotal|rupiah }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Diskon</th>
+                            <td class="text-end text-danger">{{ sales_order.diskon|rupiah }}</td>
+                        </tr>
+                        <tr>
+                            <th>Pajak</th>
+                            <td class="text-end">{{ sales_order.pajak|rupiah }}</td>
+                        </tr>
+                        <tr class="table-active">
+                            <th class="fs-5">Total</th>
+                            <td class="text-end"><h5 class="mb-0 text-success">{{ sales_order.total_harga|rupiah }}</h5></td>
+                        </tr>
+                    </table>
+                    {% if sales_order.catatan %}
+                    <hr>
+                    <div>
+                        <strong><i class="ri-sticky-note-line me-1"></i> Catatan:</strong>
+                        <p class="mt-2">{{ sales_order.catatan }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Item Produk -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="ri-box-3-line me-2"></i>Detail Produk</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Produk</th>
+                            <th>Qty</th>
+                            <th>Harga Satuan</th>
+                            <th>Diskon</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in sales_order.items.all %}
+                        <tr>
+                            <td><strong>{{ item.produk.nama }}</strong><br><small class="text-muted">{{ item.produk.sku }}</small></td>
+                            <td>{{ item.jumlah|floatformat:0 }} {{ item.produk.satuan.singkatan }}</td>
+                            <td>{{ item.harga_satuan|rupiah }}</td>
+                            <td class="text-danger">{{ item.diskon|rupiah }}</td>
+                            <td><strong>{{ item.total|rupiah }}</strong></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">Belum ada item produk</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Riwayat Aktivitas -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="ri-history-line me-2"></i>Riwayat Aktivitas Sales Order</h5>
+        </div>
+        <div class="card-body">
+            {% include 'laporan/partials/timeline_style.html' %}
+            
+            {% if activity_logs %}
+            <ul class="timeline mb-0">
+                {% for log in activity_logs %}
+                <li class="timeline-item timeline-item-transparent border-left-dashed">
+                    <span class="timeline-point timeline-point-{% if log.action == 'create' %}info{% elif log.action == 'update' %}warning{% elif log.action == 'delete' %}danger{% elif log.action == 'login' %}primary{% elif log.action == 'logout' %}secondary{% else %}dark{% endif %}">
+                    </span>
+                    <div class="timeline-event">
+                        <div class="timeline-title">{{ log.get_action_display }}</div>
+                        
+                        {% if log.changes %}
+                            {% with changes_dict=log.changes|json_load_safe %}
+                                {% if changes_dict %}
+                                <ul class="changes-list">
+                                    {% for field, val in changes_dict.items %}
+                                    <li>
+                                        <span class="field-label">{{ field|title|replace_underscore:" " }}</span>
+                                        {% if val.old %}
+                                            <span class="val-old">{{ val.old }}</span>
+                                        {% endif %}
+                                        {% if val.old and val.new %}
+                                            <i class="ri-arrow-right-line arrow-icon"></i>
+                                        {% endif %}
+                                        {% if val.new %}
+                                            <span class="val-new">{{ val.new }}</span>
+                                        {% endif %}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                            {% endwith %}
+                        {% endif %}
+                        
+                        <div class="timeline-user">
+                            <i class="ri-user-3-line"></i>
+                            <span>{{ log.user.username }}</span>
+                            <span class="text-muted" style="margin-left: 5px;">• {{ log.timestamp|date:"d M Y, H:i" }}</span>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="ri-history-line ri-3x text-muted mb-3 d-block"></i>
+                <p class="text-muted">Belum ada riwayat aktivitas untuk sales order ini</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock content %}

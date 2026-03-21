@@ -1,0 +1,229 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   USER FORM - Form Tambah/Edit User
+   Formulir untuk membuat atau mengedit pengguna.
+   Field: username, nama, email, role/group, password.
+   ==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block title %}{{ title }} - User Management{% endblock title %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- Breadcrumb -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">
+                <i class="ri-user-settings-line me-2"></i>{{ title }}
+            </h4>
+            <p class="text-muted mb-0">Kelola data pengguna sistem</p>
+        </div>
+        <a href="javascript:history.back()" class="btn btn-label-secondary">
+            <i class="ri-arrow-left-line me-2"></i>Kembali
+        </a>
+    </div>
+
+    <!-- Main Form Card -->
+    <div class="row">
+        <div class="col-xl-8 col-lg-10 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        {% if next_url %}
+                        <input type="hidden" name="next_url" value="{{ next_url }}">
+                        {% endif %}
+                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger alert-dismissible" role="alert">
+                            <h5 class="alert-heading mb-1">
+                                <i class="ri-error-warning-line me-2"></i>Form Error
+                            </h5>
+                            <ul class="mb-0">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ field.label }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endif %}
+
+                        <!-- Basic Information -->
+                        <div class="mb-4">
+                            <h5 class="card-title mb-3">
+<i class="ri-user-line me-2"></i>Informasi Dasar
+                            </h5>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label" for="id_username">
+                                        Username <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.username }}
+                                    <div class="form-text">Username untuk login</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="id_email">
+                                        Email <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.email }}
+                                    <div class="form-text">Alamat email aktif</div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-6">
+                                    <label class="form-label" for="id_first_name">
+                                        Nama Depan
+                                    </label>
+                                    {{ form.first_name }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="id_last_name">
+                                        Nama Belakang
+                                    </label>
+                                    {{ form.last_name }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Password (for new user only) -->
+                        {% if not is_edit %}
+                        <div class="mb-4">
+                            <h5 class="card-title mb-3">
+                                <i class="ri-lock-password-line me-2"></i>Password
+                            </h5>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label" for="password">
+                                        Password <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="password" class="form-control" id="password" name="password" placeholder="Minimal 8 karakter" required>
+                                    <div class="form-text">Password minimal 8 karakter</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="password_confirm">
+                                        Konfirmasi Password <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="Ulangi password" required>
+                                    <div class="form-text">Harus sama dengan password</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Role & Permissions -->
+                        <div class="mb-4">
+                            <h5 class="card-title mb-3">
+                                <i class="ri-shield-user-line me-2"></i>Role & Akses
+                            </h5>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label" for="role">
+                                        Role <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" id="role" name="role" required>
+                                        <option value="">Pilih Role</option>
+                                        {% for value, label in role_choices %}
+                                        <option value="{{ value }}" {% if current_role == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">Tentukan hak akses pengguna</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Status Akun</label>
+                                    <div class="mt-2">
+                                        <div class="form-check form-switch">
+                                            {{ form.is_active }}
+                                            <label class="form-check-label" for="id_is_active">
+                                                Aktif
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Non-aktifkan untuk mencegah login</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if user_role == 'SUPERUSER' %}
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch">
+                                        {{ form.is_staff }}
+                                        <label class="form-check-label" for="id_is_staff">
+                                            <strong>Staff Status</strong>
+                                            <div class="form-text mt-0">Akses ke Django Admin</div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="javascript:history.back()" class="btn btn-label-secondary">
+                                <i class="ri-close-line me-2"></i>Batal
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="ri-save-line me-2"></i>
+                                {% if is_edit %}Update User{% else %}Simpan User{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block page_js %}
+<script>
+// Tambah class Bootstrap ke field form
+document.addEventListener('DOMContentLoaded', function() {
+    // Text inputs
+    document.querySelectorAll('input[type="text"], input[type="email"]').forEach(el => {
+        el.classList.add('form-control');
+    });
+    
+    // Checkbox-checkbox
+    document.querySelectorAll('input[type="checkbox"]').forEach(el => {
+        el.classList.add('form-check-input');
+    });
+    
+    // Password validation
+    const passwordForm = document.querySelector('form');
+    if (passwordForm) {
+        passwordForm.addEventListener('submit', function(e) {
+            const password = document.getElementById('password');
+            const confirm = document.getElementById('password_confirm');
+            
+            if (password && confirm) {
+                if (password.value !== confirm.value) {
+                    e.preventDefault();
+                    alert('Password dan Konfirmasi Password tidak sama!');
+                    confirm.focus();
+                    return false;
+                }
+                
+                if (password.value.length < 8) {
+                    e.preventDefault();
+                    alert('Password harus minimal 8 karakter!');
+                    password.focus();
+                    return false;
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock page_js %}

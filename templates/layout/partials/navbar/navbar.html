@@ -1,0 +1,510 @@
+{% comment %}
+==========================================================================
+   NAVBAR - Navbar Utama
+   Template navbar/header yang ditampilkan di semua halaman.
+   Komponen: search global, notifikasi, user dropdown, dark mode toggle.
+   Responsive dengan hamburger menu untuk mobile.
+   ==========================================================================
+{% endcomment %}
+{% load i18n %}
+{% load static %}
+
+{% if navbar_detached %}
+<nav
+  class="layout-navbar {{container_class}} navbar navbar-expand-xl {{navbar_detached_class}} align-items-center bg-navbar-theme"
+  id="layout-navbar">
+  {% endif %}
+
+  {# Layout horizontal (navbar tidak terpisah) #}
+
+  {% if not navbar_detached %}
+  <nav class="layout-navbar navbar navbar-expand-xl align-items-center bg-navbar-theme" id="layout-navbar">
+    <div class="{{container_class}}">
+      {% endif %}
+      <!--  Brand demo (display only for navbar-full and hide on below xl) -->
+      {% if navbar_full %}
+      <div class="navbar-brand app-brand demo d-none d-xl-flex py-0 me-6">
+        <a href="{% url 'dashboard:index' %}" class="app-brand-link gap-2">
+          <span class="app-brand-logo demo">
+            {% include 'partials/logo.html' %}
+          </span>
+          <span class="app-brand-text demo menu-text fw-semibold">{{ system_title|default:"SIMKOS" }}</span>
+        </a>
+
+        {% if menu_horizontal %}
+        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto d-xl-none">
+          <i class="ri-close-fill align-middle"></i>
+        </a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- ! Not required for layout-without-menu -->
+      {% if not navbar_hide_toggle %}
+      <div
+        class="layout-menu-toggle navbar-nav align-items-xl-center me-4 me-xl-0 {{ menu_horizontal|yesno:'d-xl-none,' }} {{ content_navbar|yesno:'d-xl-none,' }}">
+        <a class="nav-item nav-link px-0 me-xl-6" href="javascript:void(0)">
+          <i class="ri-menu-fill ri-22px"></i>
+        </a>
+      </div>
+      {% endif %}
+
+      <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
+        {% if not menu_horizontal %}
+        <!-- Search -->
+        <div class="navbar-nav align-items-center">
+          <div class="nav-item navbar-search-wrapper mb-0">
+            <a class="nav-item nav-link search-toggler fw-normal px-0" href="javascript:void(0);">
+              <i class="ri-search-line ri-22px scaleX-n1-rtl me-3"></i>
+              <span class="d-none d-md-inline-block text-muted">Search (Ctrl+/)</span>
+            </a>
+          </div>
+        </div>
+        <!-- /Search -->
+        {% endif %}
+        <ul class="navbar-nav flex-row align-items-center ms-auto">
+
+          {% if menu_horizontal %}
+          <!-- Search -->
+          <li class="nav-item navbar-search-wrapper me-1 me-xl-0">
+            <a class="nav-link btn btn-text-secondary rounded-pill search-toggler fw-normal" href="javascript:void(0);">
+              <i class="ri-search-line ri-22px scaleX-n1-rtl"></i>
+            </a>
+          </li>
+          <!-- /Search -->
+          {% endif %}
+
+
+          {% if is_dashboard_page %}
+          <!-- Dashboard Date Filter -->
+          <div class="navbar-nav align-items-center">
+            <div class="nav-item dropdown me-2 me-xl-0">
+              <a class="nav-link dropdown-toggle hide-arrow position-relative" href="javascript:void(0);"
+                 data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                 id="dashboardDateFilterBtn"
+                 title="Filter Waktu Dashboard">
+                <i class="ri-calendar-line ri-22px{% if is_filtered %} text-primary{% endif %}"></i>
+                {% if is_filtered %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary"
+                      style="font-size: 0.55rem; padding: 0.15rem 0.35rem; min-width: auto;">
+                  <i class="ri-check-line" style="font-size: 0.5rem;"></i>
+                </span>
+                {% endif %}
+              </a>
+              <div class="dropdown-menu dropdown-menu-end p-4" style="min-width: 320px;" id="dashboardDateFilterDropdown">
+                <h6 class="dropdown-header px-0 pt-0 mb-3">
+                  <i class="ri-calendar-line me-1"></i>Filter Waktu Dashboard
+                </h6>
+
+                <!-- Custom Date Range -->
+                <div class="mb-2">
+                  <label class="form-label small fw-medium mb-1">Tanggal Mulai</label>
+                  <input type="date" class="form-control form-control-sm" id="dashFilterStartDate"
+                         value="{{ filter_start_date }}">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small fw-medium mb-1">Tanggal Akhir</label>
+                  <input type="date" class="form-control form-control-sm" id="dashFilterEndDate"
+                         value="{{ filter_end_date }}">
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex gap-2">
+                  <button class="btn btn-primary btn-sm flex-fill" id="dashFilterApplyBtn">
+                    <i class="ri-filter-3-line me-1"></i>Terapkan
+                  </button>
+                  {% if is_filtered %}
+                  <a href="{% url 'dashboard:index' %}" class="btn btn-label-secondary btn-sm flex-fill">
+                    <i class="ri-refresh-line me-1"></i>Reset
+                  </a>
+                  {% endif %}
+                </div>
+
+                {% if is_filtered %}
+                <div class="mt-3 px-1">
+                  <small class="text-muted">
+                    <i class="ri-information-line me-1"></i>Periode aktif: <strong>{{ bulan_ini }}</strong>
+                  </small>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <!-- Dashboard Date Filter Script -->
+          <script>
+          document.addEventListener('DOMContentLoaded', function() {
+              var startInput = document.getElementById('dashFilterStartDate');
+              var endInput = document.getElementById('dashFilterEndDate');
+              var applyBtn = document.getElementById('dashFilterApplyBtn');
+
+              function formatDate(d) {
+                  var y = d.getFullYear();
+                  var m = String(d.getMonth() + 1).padStart(2, '0');
+                  var dd = String(d.getDate()).padStart(2, '0');
+                  return y + '-' + m + '-' + dd;
+              }
+
+              applyBtn.addEventListener('click', function() {
+                  var s = startInput.value;
+                  var e = endInput.value;
+                  if (s && e) {
+                      window.location.href = '{% url "dashboard:index" %}?start_date=' + s + '&end_date=' + e;
+                  } else if (s) {
+                      window.location.href = '{% url "dashboard:index" %}?start_date=' + s;
+                  } else {
+                      window.location.href = '{% url "dashboard:index" %}';
+                  }
+              });
+          });
+          </script>
+          {% endif %}
+
+          {% if has_customizer %}
+          <!-- Style Switcher -->
+          <div class="navbar-nav align-items-center">
+            <div class="nav-item dropdown-style-switcher dropdown me-2 me-xl-0">
+              <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
+                <i class='ri-22px'></i>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-start dropdown-styles">
+                <li>
+                  <a class="dropdown-item" href="javascript:void(0);" data-theme="light">
+                    <span class="align-middle"><i class='ri-sun-line ri-22px me-3'></i>Light</span>
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="javascript:void(0);" data-theme="dark">
+                    <span class="align-middle"><i class='ri-moon-clear-line ri-22px me-3'></i>Dark</span>
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="javascript:void(0);" data-theme="system">
+                    <span class="align-middle"><i class='ri-computer-line ri-22px me-3'></i>System</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <!-- / Style Switcher-->
+
+
+          {% endif %}
+          <!-- Notification removed - not implemented -->
+
+          <!-- User -->
+          <li class="nav-item navbar-dropdown dropdown-user dropdown">
+            <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
+              <div class="avatar avatar-online">
+                {% if request.user.is_authenticated and request.user.profile.avatar %}
+                <img src="{{ request.user.profile.avatar.url }}" alt="{{ request.user.username }}"
+                  class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                {% else %}
+                <img src="{% static 'img/avatars/1.png' %}" alt class="rounded-circle"
+                  style="width: 40px; height: 40px; object-fit: cover;">
+                {% endif %}
+              </div>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <a class="dropdown-item" href="#">
+                  <div class="d-flex">
+                    <div class="flex-shrink-0 me-2">
+                      <div class="avatar avatar-online">
+                        {% if request.user.is_authenticated and request.user.profile.avatar %}
+                        <img src="{{ request.user.profile.avatar.url }}" alt="{{ request.user.username }}"
+                          class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                        {% else %}
+                        <img src="{% static 'img/avatars/1.png' %}" alt class="rounded-circle"
+                          style="width: 40px; height: 40px; object-fit: cover;">
+                        {% endif %}
+                      </div>
+                    </div>
+                    <div class="flex-grow-1">
+                      <span class="fw-medium d-block">
+                        {% if request.user.first_name or request.user.last_name %}
+                        {{ request.user.first_name }} {{ request.user.last_name }}
+                        {% else %}
+                        {{ request.user.username|capfirst }}
+                        {% endif %}
+                      </span>
+                      <small class="text-muted">
+                        {% if request.user.is_superuser %}Superuser{% elif request.user.is_staff %}Staff{% else %}User
+                        {%endif %}
+                      </small>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li>
+                <div class="dropdown-divider"></div>
+              </li>
+              <li>
+                <a class="dropdown-item" href="#">
+                  <i class="ri-user-3-line ri-22px me-2"></i>
+                  <span class="align-middle">Profil Saya</span>
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="#">
+                  <i class="ri-building-line ri-22px me-2"></i>
+                  <span class="align-middle">Pengaturan Perusahaan</span>
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="#">
+                  <i class="ri-history-line ri-22px me-2"></i>
+                  <span class="align-middle">Log Aktivitas</span>
+                </a>
+              </li>
+              <li>
+                <div class="dropdown-divider my-1"></div>
+              </li>
+              <li>
+                <form action="{% url 'logout' %}" method="post" class="d-grid px-4 pt-2 pb-1">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-danger d-flex">
+                    <small class="align-middle">Logout</small>
+                    <i class="ri-logout-box-r-line ms-2 ri-16px"></i>
+                  </button>
+                </form>
+              </li>
+            </ul>
+          </li>
+          <!--/ User -->
+        </ul>
+      </div>
+
+      <!-- Search Small Screens -->
+      <div
+        class="navbar-search-wrapper search-input-wrapper {% if menu_horizontal %}{{container_class}}{% endif %} d-none">
+        <input type="text"
+          class="form-control search-input {% if not menu_horizontal %}{{container_class}}{% endif %} border-0"
+          placeholder="Cari properti, kamar, penyewa, kontrak..." aria-label="Search..." id="globalSearchInput"
+          autocomplete="off">
+        <i class="ri-close-fill search-toggler cursor-pointer"></i>
+        <!-- Search Results Dropdown -->
+        <div id="searchResultsDropdown" class="search-results-dropdown d-none">
+          <div id="searchResultsList"></div>
+          <div id="searchLoading" class="text-center py-3 d-none">
+            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+            <span class="ms-2 text-muted">Mencari...</span>
+          </div>
+          <div id="searchEmpty" class="text-center py-4 d-none">
+            <i class="ri-search-line ri-24px text-muted d-block mb-1"></i>
+            <span class="text-muted">Tidak ditemukan hasil</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Results Styles & Script -->
+      <style>
+        .search-results-dropdown {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: var(--bs-body-bg, #fff);
+          border: 1px solid rgba(0,0,0,0.1);
+          border-top: none;
+          border-radius: 0 0 0.5rem 0.5rem;
+          max-height: 400px;
+          overflow-y: auto;
+          z-index: 9999;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+        }
+        .search-result-category {
+          padding: 0.5rem 1rem;
+          font-size: 0.7rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: #696cff;
+          background: rgba(105,108,255,0.04);
+          border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .search-result-item {
+          display: flex;
+          align-items: center;
+          padding: 0.625rem 1rem;
+          cursor: pointer;
+          transition: background 0.15s;
+          text-decoration: none;
+          color: inherit;
+          border-bottom: 1px solid rgba(0,0,0,0.03);
+        }
+        .search-result-item:hover,
+        .search-result-item.active {
+          background: rgba(105,108,255,0.08);
+          color: inherit;
+        }
+        .search-result-item .result-icon {
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 0.375rem;
+          background: rgba(105,108,255,0.08);
+          color: #696cff;
+          margin-right: 0.75rem;
+          flex-shrink: 0;
+          font-size: 1.125rem;
+        }
+        .search-result-item .result-title {
+          font-weight: 500;
+          font-size: 0.875rem;
+          line-height: 1.3;
+        }
+        .search-result-item .result-subtitle {
+          font-size: 0.75rem;
+          color: #697a8d;
+        }
+        html.dark-style .search-results-dropdown {
+          background: var(--bs-body-bg, #2b2c40);
+          border-color: rgba(255,255,255,0.1);
+        }
+        html.dark-style .search-result-item:hover,
+        html.dark-style .search-result-item.active {
+          background: rgba(105,108,255,0.16);
+        }
+        html.dark-style .search-result-item .result-subtitle {
+          color: #a3a4cc;
+        }
+      </style>
+      <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('globalSearchInput');
+        const dropdown = document.getElementById('searchResultsDropdown');
+        const resultsList = document.getElementById('searchResultsList');
+        const loadingEl = document.getElementById('searchLoading');
+        const emptyEl = document.getElementById('searchEmpty');
+        let debounceTimer = null;
+        let activeIndex = -1;
+
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', function() {
+          const query = this.value.trim();
+          clearTimeout(debounceTimer);
+
+          if (query.length < 2) {
+            hideDropdown();
+            return;
+          }
+
+          loadingEl.classList.remove('d-none');
+          emptyEl.classList.add('d-none');
+          resultsList.innerHTML = '';
+          dropdown.classList.remove('d-none');
+          activeIndex = -1;
+
+          debounceTimer = setTimeout(function() {
+            fetch('/api/search/?q=' + encodeURIComponent(query))
+              .then(r => r.json())
+              .then(data => {
+                loadingEl.classList.add('d-none');
+
+                if (!data.results || data.results.length === 0) {
+                  emptyEl.classList.remove('d-none');
+                  resultsList.innerHTML = '';
+                  return;
+                }
+
+                emptyEl.classList.add('d-none');
+                renderResults(data.results);
+              })
+              .catch(() => {
+                loadingEl.classList.add('d-none');
+                emptyEl.classList.remove('d-none');
+              });
+          }, 300);
+        });
+
+        // Keyboard navigation
+        searchInput.addEventListener('keydown', function(e) {
+          const items = dropdown.querySelectorAll('.search-result-item');
+          if (items.length === 0) return;
+
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIndex = Math.min(activeIndex + 1, items.length - 1);
+            updateActiveItem(items);
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIndex = Math.max(activeIndex - 1, 0);
+            updateActiveItem(items);
+          } else if (e.key === 'Enter' && activeIndex >= 0) {
+            e.preventDefault();
+            items[activeIndex].click();
+          } else if (e.key === 'Escape') {
+            hideDropdown();
+          }
+        });
+
+        function updateActiveItem(items) {
+          items.forEach((item, i) => {
+            item.classList.toggle('active', i === activeIndex);
+          });
+          if (items[activeIndex]) {
+            items[activeIndex].scrollIntoView({ block: 'nearest' });
+          }
+        }
+
+        function renderResults(results) {
+          let html = '';
+          let lastCategory = '';
+
+          results.forEach(r => {
+            if (r.category !== lastCategory) {
+              html += `<div class="search-result-category">${r.category}</div>`;
+              lastCategory = r.category;
+            }
+            html += `
+              <a href="${r.url}" class="search-result-item">
+                <div class="result-icon"><i class="${r.icon}"></i></div>
+                <div>
+                  <div class="result-title">${escapeHtml(r.title)}</div>
+                  <div class="result-subtitle">${escapeHtml(r.subtitle || '')}</div>
+                </div>
+              </a>`;
+          });
+
+          resultsList.innerHTML = html;
+        }
+
+        function hideDropdown() {
+          dropdown.classList.add('d-none');
+          loadingEl.classList.add('d-none');
+          emptyEl.classList.add('d-none');
+          resultsList.innerHTML = '';
+          activeIndex = -1;
+        }
+
+        function escapeHtml(str) {
+          const div = document.createElement('div');
+          div.textContent = str;
+          return div.innerHTML;
+        }
+
+        // Close search dropdown ketika search ditutup
+        document.querySelectorAll('.search-toggler').forEach(el => {
+          el.addEventListener('click', function() {
+            setTimeout(function() {
+              const wrapper = document.querySelector('.search-input-wrapper');
+              if (wrapper && wrapper.classList.contains('d-none')) {
+                hideDropdown();
+                searchInput.value = '';
+              }
+            }, 100);
+          });
+        });
+      });
+      </script>
+
+      {% if not navbar_detached %}
+    </div>
+  </nav>
+  {% endif %}
+  {% if navbar_detached %}
+</nav>
+{% endif %}

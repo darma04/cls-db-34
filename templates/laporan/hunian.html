@@ -1,0 +1,357 @@
+{% extends 'layout/layout_vertical.html' %}
+{% load static humanize %}
+{% block title %}Laporan Hunian - SIMKOS{% endblock title %}
+{% block vendor_css %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-bs5/datatables.bootstrap5.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/apex-charts/apex-charts.css' %}" />
+{% endblock vendor_css %}
+{% block vendor_js %}{{ block.super }}
+<script src="{% static 'vendor/libs/datatables-bs5/datatables-bootstrap5.js' %}"></script>
+<script src="{% static 'vendor/libs/apex-charts/apexcharts.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="{% static 'js/simkos_export.js' %}"></script>
+{% endblock vendor_js %}
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div><h4 class="mb-1"><i class="ri-door-open-line me-2"></i>Laporan Hunian</h4><p class="text-muted mb-0">Statistik tingkat hunian semua properti</p></div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Pilih Kolom</label>
+                    <div class="dropdown">
+                        <button class="btn btn-label-secondary dropdown-toggle waves-effect w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"><i class="ri-layout-column-line me-1"></i>Pilih Kolom yang Ditampilkan</button>
+                        <div class="dropdown-menu p-3" style="min-width: 280px;">
+                            <h6 class="dropdown-header px-0 mb-2">Kolom Tabel</h6>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="0" checked onchange="toggleColumns()"><label class="form-check-label">Properti</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="1" checked onchange="toggleColumns()"><label class="form-check-label">Tipe</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="2" checked onchange="toggleColumns()"><label class="form-check-label">Total Kamar</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="3" checked onchange="toggleColumns()"><label class="form-check-label">Terisi</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="4" checked onchange="toggleColumns()"><label class="form-check-label">Tersedia</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="5" checked onchange="toggleColumns()"><label class="form-check-label">Tingkat Hunian</label></div>
+                            <div class="dropdown-divider my-2"></div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-primary flex-fill" type="button" onclick="selectAllColumns()"><i class="ri-checkbox-multiple-line ri-16px"></i> Semua</button>
+                                <button class="btn btn-sm btn-label-secondary flex-fill" type="button" onclick="deselectAllColumns()"><i class="ri-checkbox-blank-line ri-16px"></i> Kosongkan</button>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-1">Klik untuk memilih kolom</small>
+                </div>
+                <div class="col-md-6"></div>
+                <div class="col-md-3"><div class="d-grid gap-2"><button class="btn btn-primary" onclick="applyFilter()"><i class="ri-filter-3-line me-1"></i>Filter</button><button class="btn btn-label-secondary" onclick="resetFilter()"><i class="ri-refresh-line me-1"></i>Mengatur Ulang</button></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div><p class="text-muted mb-1">Total Kamar</p><h4 class="mb-0">{{ total_kamar }}</h4><small class="text-muted">semua properti</small></div>
+                        <div class="avatar"><span class="avatar-initial rounded bg-label-primary"><i class="ri-door-line ri-24px"></i></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div><p class="text-muted mb-1">Terisi</p><h4 class="mb-0 text-warning">{{ total_terisi }}</h4><small class="text-warning"><i class="ri-arrow-up-s-line"></i> {% widthratio total_terisi total_kamar 100 %}% dari total</small></div>
+                        <div class="avatar"><span class="avatar-initial rounded bg-label-warning"><i class="ri-user-fill ri-24px"></i></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div><p class="text-muted mb-1">Tersedia</p><h4 class="mb-0 text-success">{{ total_tersedia }}</h4><small class="text-success"><i class="ri-checkbox-circle-line"></i> {% widthratio total_tersedia total_kamar 100 %}% dari total</small></div>
+                        <div class="avatar"><span class="avatar-initial rounded bg-label-success"><i class="ri-door-open-line ri-24px"></i></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div><p class="text-muted mb-1">Tingkat Hunian</p><h4 class="mb-0 text-primary">{{ tingkat_hunian }}%</h4><small class="text-muted">{{ kontrak_aktif }} kontrak aktif</small></div>
+                        <div class="avatar"><span class="avatar-initial rounded bg-label-primary"><i class="ri-pie-chart-line ri-24px"></i></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header pb-1">
+                    <h5 class="mb-0"><i class="ri-pie-chart-2-line me-2 text-primary"></i>Distribusi Kamar</h5>
+                    <small class="text-muted">Status seluruh kamar</small>
+                </div>
+                <div class="card-body pt-2 d-flex flex-column justify-content-center">
+                    <div id="hunianDonutChart" style="min-height: 280px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header pb-1">
+                    <h5 class="mb-0"><i class="ri-bar-chart-horizontal-line me-2 text-info"></i>Hunian per Properti</h5>
+                    <small class="text-muted">Tingkat hunian masing-masing properti</small>
+                </div>
+                <div class="card-body pt-2">
+                    <div style="position:relative;height:280px"><canvas id="hunianBarCanvas"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Table Card -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="ri-list-check-2 me-2"></i>Detail Hunian per Properti</h5>
+            <div class="d-flex gap-2">
+                <button class="btn btn-label-success" onclick="exportExcel()"><i class="ri-file-excel-2-line me-1"></i>Export Excel</button>
+                <button class="btn btn-label-danger" onclick="exportPDF()"><i class="ri-file-pdf-line me-1"></i>Export PDF</button>
+            </div>
+        </div>
+        <div class="card-datatable table-responsive">
+            <table class="table table-hover" id="dataTable">
+                <thead><tr><th>Properti</th><th>Tipe</th><th>Total Kamar</th><th>Terisi</th><th>Tersedia</th><th>Tingkat Hunian</th></tr></thead>
+                <tbody>
+                    {% for d in data_properti %}
+                    <tr>
+                        <td><strong>{{ d.properti.nama }}</strong></td>
+                        <td><span class="badge bg-label-info rounded-pill">{{ d.properti.get_tipe_display }}</span></td>
+                        <td>{{ d.total_kamar }}</td>
+                        <td><span class="badge bg-label-warning">{{ d.kamar_terisi }}</span></td>
+                        <td><span class="badge bg-label-success">{{ d.kamar_tersedia }}</span></td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="progress w-100 me-2" style="height:8px"><div class="progress-bar {% if d.tingkat_hunian >= 80 %}bg-success{% elif d.tingkat_hunian >= 50 %}bg-primary{% elif d.tingkat_hunian >= 30 %}bg-warning{% else %}bg-danger{% endif %}" style="width:{{ d.tingkat_hunian }}%"></div></div>
+                                <span class="fw-bold">{{ d.tingkat_hunian }}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-footer-summary">
+                    <tr>
+                        <td colspan="2" class="text-start ps-4 py-3" style="vertical-align: middle;">
+                            <div class="d-flex align-items-center"><i class="ri-calculator-line me-2 text-primary" style="font-size: 1.5rem;"></i><div class="text-start"><strong class="d-block" style="font-size: 1rem;">RINGKASAN</strong><small class="text-muted" style="font-size: 0.75rem;">{{ data_properti|length }} Properti</small></div></div>
+                        </td>
+                        <td class="py-3" style="vertical-align: middle;"><div class="d-flex flex-column align-items-center"><span class="badge bg-label-primary d-flex align-items-center gap-1 mb-1" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;"><span>{{ total_kamar }}</span></span><small class="text-muted" style="font-size: 0.7rem;">Total</small></div></td>
+                        <td class="py-3" style="vertical-align: middle;"><div class="d-flex flex-column align-items-center"><span class="badge bg-label-warning d-flex align-items-center gap-1 mb-1" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;"><span>{{ total_terisi }}</span></span><small class="text-muted" style="font-size: 0.7rem;">Terisi</small></div></td>
+                        <td class="py-3" style="vertical-align: middle;"><div class="d-flex flex-column align-items-center"><span class="badge bg-label-success d-flex align-items-center gap-1 mb-1" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;"><span>{{ total_tersedia }}</span></span><small class="text-muted" style="font-size: 0.7rem;">Tersedia</small></div></td>
+                        <td class="py-3" style="vertical-align: middle;"><div class="d-flex flex-column align-items-center"><span class="badge bg-label-info d-flex align-items-center gap-1 mb-1" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;"><span>{{ tingkat_hunian }}%</span></span><small class="text-muted" style="font-size: 0.7rem;">Rata-rata</small></div></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+{% block page_js %}
+<script>
+var dataTable;
+$(document).ready(function(){
+    dataTable = $('#dataTable').DataTable({
+        language:{sSearch:"Cari:",sLengthMenu:"Tampilkan _MENU_ data",sInfo:"Menampilkan _START_ sampai _END_ dari _TOTAL_ data",sInfoEmpty:"Menampilkan 0 sampai 0 dari 0 data",sZeroRecords:"Tidak ditemukan",oPaginate:{sNext:"Selanjutnya",sPrevious:"Sebelumnya"}},
+        pageLength:25,ordering:true,responsive:false,
+        dom:'<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>><"table-responsive"rt><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+    });
+
+    // === Donut Chart: Distribusi Kamar ===
+    if (typeof ApexCharts !== 'undefined') {
+        var isDarkDonut = document.documentElement.classList.contains('dark-style') ||
+                     document.body.classList.contains('dark-style') ||
+                     window.getComputedStyle(document.body).backgroundColor.includes('rgb(35') ||
+                     window.getComputedStyle(document.body).backgroundColor.includes('rgb(40');
+        var cardBgColor = isDarkDonut ? '#283046' : '#fff';
+        var primaryColor = '#7367f0';
+        var successColor = '#28c76f';
+        var dangerColor = '#ea5455';
+        var warningColor = '#ff9f43';
+        var infoColor = '#00cfe8';
+        var labelColor = isDarkDonut ? 'rgba(255,255,255,0.6)' : '#6e6b7b';
+        var gridColor = isDarkDonut ? 'rgba(255,255,255,0.1)' : '#ebe9f1';
+
+        new ApexCharts(document.querySelector("#hunianDonutChart"), {
+            series: [{{ total_terisi }}, {{ total_tersedia }}],
+            chart: {
+                type: 'donut',
+                height: 280,
+                fontFamily: '"Inter", sans-serif',
+                parentHeightOffset: 0
+            },
+            labels: ['Terisi', 'Tersedia'],
+            colors: [primaryColor, successColor],
+            plotOptions: {
+                pie: {
+                    endAngle: 130,
+                    startAngle: -130,
+                    customScale: 0.9,
+                    donut: {
+                        size: '83%',
+                        labels: {
+                            show: true,
+                            name: {
+                                offsetY: 25,
+                                fontSize: '0.9375rem',
+                                fontFamily: 'Inter',
+                                color: labelColor
+                            },
+                            value: {
+                                offsetY: -15,
+                                fontWeight: 500,
+                                fontSize: '1.75rem',
+                                fontFamily: 'Inter',
+                                color: isDarkDonut ? '#d0d2d6' : '#5e5873',
+                                formatter: function(val) { return val; }
+                            },
+                            total: {
+                                show: true,
+                                label: 'Total Kamar',
+                                fontSize: '0.9375rem',
+                                fontFamily: 'Inter',
+                                color: labelColor,
+                                formatter: function(w) { return w.globals.seriesTotals.reduce(function(a,b){return a+b;},0); }
+                            }
+                        }
+                    }
+                }
+            },
+            tooltip: { enabled: false },
+            dataLabels: { enabled: false },
+            stroke: {
+                width: 3,
+                lineCap: 'round',
+                colors: [cardBgColor]
+            },
+            states: {
+                hover: { filter: { type: 'none' } },
+                active: { filter: { type: 'none' } }
+            },
+            legend: {
+                position: 'bottom',
+                fontFamily: 'Inter',
+                fontSize: '15px',
+                markers: { offsetX: -3, height: 10, width: 10 },
+                itemMargin: { horizontal: 24, vertical: 8 },
+                offsetY: -10,
+                labels: { colors: labelColor }
+            },
+            responsive: [{ breakpoint: 480, options: { chart: { height: 240 } } }]
+        }).render();
+
+        // === Bar Chart: Hunian per Properti (Chart.js - Identik dengan Tren Pendapatan AI Dashboard) ===
+        var propNames = [{% for d in data_properti %}'{{ d.properti.nama|truncatechars:15 }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+        var propHunian = [{% for d in data_properti %}{{ d.tingkat_hunian }}{% if not forloop.last %},{% endif %}{% endfor %}];
+        var isDark = document.documentElement.classList.contains('dark-style') ||
+                     document.body.classList.contains('dark-style') ||
+                     window.getComputedStyle(document.body).backgroundColor.includes('rgb(35') ||
+                     window.getComputedStyle(document.body).backgroundColor.includes('rgb(40');
+        var chartGridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
+        var chartTickColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)';
+
+        var barEl = document.getElementById('hunianBarCanvas');
+        if (barEl) {
+            new Chart(barEl.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: propNames,
+                    datasets: [{
+                        label: 'Tingkat Hunian (%)',
+                        data: propHunian,
+                        backgroundColor: 'rgba(102, 108, 255, 0.75)',
+                        borderColor: '#666cff',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        barPercentage: 0.55,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            padding: 10,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(ctx) {
+                                    return ctx.parsed.y + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                color: chartTickColor,
+                                callback: function(val) {
+                                    return val + '%';
+                                }
+                            },
+                            grid: { color: chartGridColor }
+                        },
+                        x: {
+                            ticks: { color: chartTickColor },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+    }
+});
+function toggleColumns() { SimkosExport.toggleColumns('#dataTable'); }
+function selectAllColumns(){document.querySelectorAll('.column-checkbox').forEach(cb=>{cb.checked=true;});toggleColumns();}
+function deselectAllColumns(){document.querySelectorAll('.column-checkbox').forEach(cb=>{cb.checked=false;});toggleColumns();}
+function applyFilter() { toggleColumns(); }
+function resetFilter() { selectAllColumns(); }
+
+// Konfigurasi Export Laporan Hunian
+// Kolom: 0=Properti, 1=Tipe, 2=Total Kamar, 3=Terisi, 4=Tersedia, 5=Tingkat Hunian
+// Kolom 2,3,4 bukan nominal tapi angka total — tampilkan di FOOTER_DATA agar berada di kolom yang tepat
+var EXCEL_INFO = {
+    name: "{{ export_excel_template.header_nama_perusahaan|escapejs|default:'SIMKOS' }}",
+    address: "{{ export_excel_template.header_alamat|escapejs|default:'-' }}",
+    phone: "{{ export_excel_template.header_telepon|escapejs|default:'-' }}",
+    email: "{{ export_excel_template.header_email|escapejs|default:'-' }}",
+    copyright: "{{ export_excel_template.footer_copyright|escapejs|default:'\u00a9 2026 SIMKOS' }}"
+};
+var PDF_INFO = {
+    name: "{{ export_pdf_template.header_nama_perusahaan|escapejs|default:'SIMKOS' }}",
+    address: "{{ export_pdf_template.header_alamat|escapejs|default:'-' }}",
+    phone: "{{ export_pdf_template.header_telepon|escapejs|default:'-' }}",
+    email: "{{ export_pdf_template.header_email|escapejs|default:'-' }}",
+    copyright: "{{ export_pdf_template.footer_copyright|escapejs|default:'\u00a9 2026 SIMKOS' }}"
+};
+var FOOTER_DATA  = { 2: '{{ total_kamar }}', 3: '{{ total_terisi }}', 4: '{{ total_tersedia }}', 5: '{{ tingkat_hunian }}%' };
+var FOOTER_LABEL = 'RINGKASAN ({{ data_properti|length }} Properti)';
+// moneyColumns = [] → tidak ada kolom uang di tabel hunian, semua angka biasa
+var MONEY_COLS   = [];
+function exportExcel() { SimkosExport.buildExcel('#dataTable', EXCEL_INFO, FOOTER_DATA, FOOTER_LABEL, 'LAPORAN HUNIAN', 'Laporan_Hunian', MONEY_COLS); }
+function exportPDF()   { SimkosExport.buildPDF('#dataTable',   PDF_INFO,   FOOTER_DATA, FOOTER_LABEL, 'LAPORAN HUNIAN', 'Laporan_Hunian', MONEY_COLS); }
+</script>
+{% endblock page_js %}

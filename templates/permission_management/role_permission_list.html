@@ -1,0 +1,322 @@
+{% extends "layout/layout_vertical.html" %}
+{% comment %}
+==========================================================================
+   ROLE PERMISSION LIST - Daftar Hak Akses per Role
+   Halaman pengaturan hak akses (permission) per role.
+   Checkboxes untuk setiap modul dan aksi CRUD.
+   Fitur: save permission, reset, filter modul.
+   ==========================================================================
+{% endcomment %}
+{% load i18n %}
+{% load permission_tags %}
+
+
+{% block head_title %}{{ title }}{% endblock %}
+
+{% block vendor_css %}
+{{ block.super }}
+{% load static %}
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-bs5/datatables.bootstrap5.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/sweetalert2/sweetalert2.css' %}" />
+{% endblock vendor_css %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">
+                <i class="ri-shield-user-line me-2"></i>Role & Permission Management
+            </h4>
+            <p class="text-muted mb-0">Kelola akses dan permission untuk setiap role</p>
+        </div>
+        {% if user_role == 'SUPERUSER' %}
+        <div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPermissionModal">
+                <i class="ri-add-line me-2"></i>Tambah Permission
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Permission Matrix -->
+    <div class="card">
+        <div class="card-header pb-0">
+            <h5 class="card-title mb-0">Permission Matrix</h5>
+            <p class="text-muted small mb-0">Overview permission untuk semua role</p>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 150px;">Module</th>
+                            {% for role_code, role_name in roles %}
+                            <th class="text-center" style="min-width: 180px;">
+                                <div class="fw-bold">{{ role_name|truncatechars:15 }}</div>
+                                <small class="text-muted">{{ role_code }}</small>
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for module_code, module_name in modules %}
+                        <tr>
+                            <td class="fw-semibold">
+                                <i class="ri-folder-line me-1 text-primary"></i>
+                                {{ module_name }}
+                            </td>
+                            {% for role_code, role_name in roles %}
+                            <td class="text-center p-2">
+                                {% if role_code == 'SUPERUSER' %}
+                                <span class="badge bg-label-success">
+                                    <i class="ri-check-double-line"></i> Full Access
+                                </span>
+                                {% else %}
+                                    {% with perm=permissions_by_role|get_item:role_code|get_module_perm:module_code %}
+                                    {% if perm %}
+                                    <div class="d-flex gap-1 justify-content-center flex-wrap">
+                                        {% if perm.can_view %}
+                                        <span class="badge bg-label-info" title="Can View">
+                                            <i class="ri-eye-line"></i>
+                                        </span>
+                                        {% endif %}
+                                        {% if perm.can_create %}
+                                        <span class="badge bg-label-success" title="Can Create">
+                                            <i class="ri-add-line"></i>
+                                        </span>
+                                        {% endif %}
+                                        {% if perm.can_edit %}
+                                        <span class="badge bg-label-warning" title="Can Edit">
+                                            <i class="ri-edit-line"></i>
+                                        </span>
+                                        {% endif %}
+                                        {% if perm.can_delete %}
+                                        <span class="badge bg-label-danger" title="Can Delete">
+                                            <i class="ri-delete-bin-line"></i>
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted d-block mt-1">
+                                        <a href="{% url 'permission_management:edit' perm.pk %}" class="text-decoration-none">
+                                            <i class="ri-settings-4-line"></i>
+                                        </a>
+                                    </small>
+                                    {% else %}
+                                    <span class="badge bg-label-secondary">
+                                        <i class="ri-close-line"></i> No Access
+                                    </span>
+                                    {% endif %}
+                                    {% endwith %}
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="card mt-3">
+        <div class="card-body">
+            <h6 class="card-title mb-3">
+                <i class="ri-information-line me-2"></i>Legend
+            </h6>
+            <div class="row">
+                <div class="col-md-3">
+                    <span class="badge bg-label-info me-2"><i class="ri-eye-line"></i></span>
+                    <span class="text-muted">View / Read</span>
+                </div>
+                <div class="col-md-3">
+                    <span class="badge bg-label-success me-2"><i class="ri-add-line"></i></span>
+                    <span class="text-muted">Create / Add</span>
+                </div>
+                <div class="col-md-3">
+                    <span class="badge bg-label-warning me-2"><i class="ri-edit-line"></i></span>
+                    <span class="text-muted">Edit / Update</span>
+                </div>
+                <div class="col-md-3">
+                    <span class="badge bg-label-danger me-2"><i class="ri-delete-bin-line"></i></span>
+                    <span class="text-muted">Delete / Remove</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed List -->
+    <div class="card mt-3">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Detailed Permission List</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover datatables-permissions">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Role</th>
+                            <th>Module</th>
+                            <th class="text-center">Permissions</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for permission in permissions %}
+                        <tr>
+                            <td>
+                                <span class="badge {% if permission.role == 'SUPERUSER' %}bg-danger{% elif permission.role == 'ADMIN' %}bg-primary{% elif permission.role == 'USER' %}bg-info{% else %}bg-secondary{% endif %}">
+                                    {{ permission.get_role_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <i class="ri-folder-line me-1 text-muted"></i>
+                                {{ permission.get_module_display }}
+                            </td>
+                            <td class="text-center">
+                                <div class="d-flex gap-1 justify-content-center">
+                                    {% if permission.can_view %}
+                                    <span class="badge bg-label-info">View</span>
+                                    {% endif %}
+                                    {% if permission.can_create %}
+                                    <span class="badge bg-label-success">Create</span>
+                                    {% endif %}
+                                    {% if permission.can_edit %}
+                                    <span class="badge bg-label-warning">Edit</span>
+                                    {% endif %}
+                                    {% if permission.can_delete %}
+                                    <span class="badge bg-label-danger">Delete</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                {% if can_edit.access_control or can_delete.access_control %}
+                                <div class="dropdown">
+                                    <button type="button" class="btn btn-sm btn-icon dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                                        <i class="ri-more-2-line"></i>
+                                    </button>
+                                    <div class="dropdown-menu">
+                                        {% if can_edit.access_control %}
+                                        <a class="dropdown-item" href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#editPermissionModal" data-permission-id="{{ permission.pk }}">
+                                            <i class="ri-edit-line me-2"></i>Edit
+                                        </a>
+                                        {% endif %}
+                                        {% if can_edit.access_control and can_delete.access_control %}
+                                        <div class="dropdown-divider"></div>
+                                        {% endif %}
+                                        {% if can_delete.access_control %}
+                                        <a class="dropdown-item text-danger" href="javascript:void(0);" onclick="confirmDelete({{ permission.pk }}, '{{ permission }}')">
+                                            <i class="ri-delete-bin-line me-2"></i>Hapus
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% else %}
+                                <span class="badge bg-label-secondary">
+                                    <i class="ri-eye-line me-1"></i>View Only
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5">
+                                <i class="ri-shield-line ri-3x text-muted mb-3 d-block"></i>
+                                <p class="text-muted mb-0">Belum ada permission yang dikonfigurasi</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deletePermissionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger align-items-center py-3">
+                <h5 class="modal-title text-white mb-0">
+                    <i class="ri-error-warning-line me-2"></i>Konfirmasi Hapus
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="ri-delete-bin-line ri-3x text-danger mb-3 d-block"></i>
+                <h5 class="mb-2">Hapus Permission?</h5>
+                <p class="mb-0 text-muted">Permission: <strong id="permissionName"></strong></p>
+                <p class="mb-0 text-muted small">Tindakan ini tidak dapat dibatalkan!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="ri-delete-bin-line me-1"></i>Ya, Hapus
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Modals -->
+{% include "permission_management/_modals/add_permission_modal.html" %}
+{% include "permission_management/_modals/edit_permission_modal.html" %}
+
+{% endblock content %}
+
+{% block vendor_js %}
+{{ block.super }}
+{% load static %}
+<script src="{% static 'vendor/libs/datatables-bs5/datatables-bootstrap5.js' %}"></script>
+<script src="{% static 'vendor/libs/sweetalert2/sweetalert2.js' %}"></script>
+{% endblock vendor_js %}
+
+{% block page_js %}
+{% load static %}
+<script src="{% static 'js/permission_management.js' %}"></script>
+<script>
+let deletePermissionId = null;
+
+function confirmDelete(id, name) {
+    deletePermissionId = id;
+    document.getElementById('permissionName').textContent = name;
+    new bootstrap.Modal(document.getElementById('deletePermissionModal')).show();
+}
+
+document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    if (!deletePermissionId) return;
+    
+    // Show loading
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Menghapus...';
+    
+    // Send delete request
+    fetch(`/permission-management/${deletePermissionId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Gagal menghapus permission: ' + data.message);
+            this.disabled = false;
+            this.innerHTML = '<i class="ri-delete-bin-line me-1"></i>Ya, Hapus';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan saat menghapus permission');
+        this.disabled = false;
+        this.innerHTML = '<i class="ri-delete-bin-line me-1"></i>Ya, Hapus';
+    });
+});
+</script>
+{% endblock page_js %}

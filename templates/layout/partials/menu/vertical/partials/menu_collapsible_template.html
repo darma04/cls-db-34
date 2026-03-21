@@ -1,0 +1,47 @@
+{% load i18n %}
+{% load permission_tags %}
+
+{% with is_group=item.submenu|filter_by_url:request  %}
+  {% comment %} 
+    CRITICAL: NO FALLBACK - Menu MUST have permission check
+    Collapsible menus will show if user has module view OR any accessible sub-modules
+  {% endcomment %}
+  
+  {% comment %} For collapsible menus, filter submenu based on accessible sub-modules {% endcomment %}
+  {% if item.submenu %}
+    {% comment %} Get accessible subs for this module {% endcomment %}
+    {% with accessible_list=accessible_subs|attr:item.slug %}
+        
+      {% comment %} 
+      Show menu if: 
+        1. Has module-level view permission (can_view.{slug}), OR
+        2. Has at least one accessible SubCRUD item
+      {% endcomment %}
+      {% with has_module_view=can_view|attr:item.slug %}
+        {% if has_module_view or accessible_list %}
+          <li class="menu-item {% if is_group %}active open{% endif %}">
+            <a href="javascript:void(0);" class="menu-link menu-toggle">
+              <i class="{{ item.icon }}"></i>
+              <div>{% trans item.name %}</div>
+              {% if item.badge %}
+                <div class="badge bg-{{ item.badge.0 }} rounded-pill ms-auto">{{ item.badge.1 }}</div>
+              {% endif %}
+            </a>
+            <ul class="menu-sub">
+              {% for sub_item in item.submenu %}
+                {% comment %} Extract sub-module name from slug (e.g., "produk-kategori" -> "kategori") {% endcomment %}
+                {% with sub_name=sub_item.slug|extract_submodule %}
+                  {% comment %} Only show sub-item if in accessible list {% endcomment %}
+                  {% if sub_name in accessible_list %}
+                    {% include './menu_link_template.html' with item=sub_item skip_perm_check=True %}
+                  {% endif %}
+                {% endwith %}
+              {% endfor %}
+            </ul>
+          </li>
+        {% endif %}
+      {% endwith %}
+        
+    {% endwith %}
+  {% endif %}
+{% endwith %}

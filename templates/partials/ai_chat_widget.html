@@ -1,0 +1,847 @@
+{% comment %}
+==========================================================================
+ AI CHAT WIDGET - Floating Chat dengan fitur lengkap
+ Fitur: Auto Insight, Context Memory, Copy, Edit, Download TXT,
+        Feedback 👍/👎, Riwayat Chat dari DB, Clear History, Tabel
+==========================================================================
+{% endcomment %}
+{% load static %}
+
+<style>
+/* ═══════ AI CHAT WIDGET ═══════ */
+#ai-chat-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1090;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+#ai-chat-fab:hover { transform: scale(1.08); }
+
+#ai-chat-panel {
+  position: fixed;
+  bottom: 88px;
+  right: 24px;
+  width: 400px;
+  max-width: calc(100vw - 32px);
+  height: 520px;
+  max-height: calc(100vh - 120px);
+  z-index: 1089;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  border: none;
+  animation: aiSlideUp 0.25s ease;
+}
+#ai-chat-panel.visible { display: flex; }
+@keyframes aiSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Header */
+.ai-chat-header {
+  background: #666cff;
+  color: #fff;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+.ai-chat-header-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.ai-chat-header-info { flex: 1; }
+.ai-chat-header-info h6 { margin: 0; font-size: 0.9rem; font-weight: 600; color: #fff; }
+.ai-chat-header-info small { opacity: 0.8; font-size: 0.7rem; }
+.ai-chat-header-actions { display: flex; gap: 2px; }
+.ai-chat-header-actions .btn {
+  width: 30px; height: 30px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; color: #fff; background: rgba(255,255,255,0.15);
+  border: none; font-size: 14px; cursor: pointer;
+  transition: background 0.2s;
+}
+.ai-chat-header-actions .btn:hover { background: rgba(255,255,255,0.3); }
+
+
+
+/* Messages */
+.ai-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bs-body-bg, #f5f5f9);
+}
+.ai-chat-messages::-webkit-scrollbar { width: 3px; }
+.ai-chat-messages::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+/* Bubble wrapper */
+.ai-msg-wrapper { position: relative; display: flex; flex-direction: column; max-width: 88%; }
+.ai-msg-wrapper.user-wrap { align-self: flex-end; }
+.ai-msg-wrapper.bot-wrap { align-self: flex-start; }
+
+.ai-msg {
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  word-wrap: break-word;
+  animation: aiMsgIn 0.2s ease;
+}
+@keyframes aiMsgIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.ai-msg.user {
+  background: #666cff;
+  color: #fff;
+  border-radius: 0.5rem 0.5rem 0.15rem 0.5rem;
+  white-space: pre-wrap;
+}
+.ai-msg.bot {
+  border-radius: 0.5rem 0.5rem 0.5rem 0.15rem;
+}
+
+/* ═══════ TABEL DI DALAM CHAT ═══════ */
+.ai-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  margin: 8px 0;
+  border-radius: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+.ai-table-scroll::-webkit-scrollbar { height: 4px; }
+.ai-table-scroll::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
+.ai-msg.bot table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 0;
+}
+.ai-msg.bot table thead th {
+  background: #2d2d2d;
+  color: #fff;
+  font-weight: 600;
+  padding: 6px 10px;
+  text-align: left;
+  white-space: nowrap;
+  border: 1px solid #222;
+}
+.ai-msg.bot table tbody td {
+  padding: 5px 10px;
+  border: 1px solid var(--bs-border-color, #e0e0e0);
+  vertical-align: top;
+}
+.ai-msg.bot table tbody tr:nth-child(even) {
+  background: rgba(102, 108, 255, 0.04);
+}
+.ai-msg.bot table tbody tr:hover {
+  background: rgba(102, 108, 255, 0.08);
+}
+/* Teks biasa di dalam bot bubble */
+.ai-msg.bot p { margin: 4px 0; }
+.ai-msg.bot ul, .ai-msg.bot ol { margin: 4px 0; padding-left: 18px; }
+.ai-msg.bot li { margin: 2px 0; }
+.ai-msg.bot strong { font-weight: 600; }
+
+/* Action buttons di bawah bubble */
+.ai-msg-actions {
+  display: flex;
+  gap: 2px;
+  margin-top: 3px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.ai-msg-wrapper:hover .ai-msg-actions { opacity: 1; }
+.ai-msg-actions .msg-action-btn {
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  color: #888;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.15s;
+}
+.ai-msg-actions .msg-action-btn:hover {
+  background: rgba(0,0,0,0.06);
+  color: #555;
+}
+.ai-msg-actions .msg-action-btn.copied { color: #28a745; }
+.ai-msg-actions .msg-action-btn.fb-active-up { color: #28a745; }
+.ai-msg-actions .msg-action-btn.fb-active-down { color: #dc3545; }
+
+/* Edit mode */
+.ai-msg-edit-area {
+  width: 100%;
+  border: 1px solid #666cff;
+  border-radius: 0.5rem;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  color: inherit;
+  background: var(--bs-body-bg, #fff);
+  font-family: inherit;
+}
+.ai-msg-edit-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  justify-content: flex-end;
+}
+.ai-msg-edit-actions .btn { font-size: 0.72rem; padding: 2px 10px; }
+
+/* Typing */
+.ai-typing {
+  display: flex; gap: 5px; align-items: center;
+  align-self: flex-start;
+  padding: 10px 14px;
+  border-radius: 0.5rem;
+}
+.ai-typing span {
+  width: 7px; height: 7px;
+  background: #999; border-radius: 50%;
+  animation: aiBounce 1.4s ease-in-out infinite;
+}
+.ai-typing span:nth-child(2) { animation-delay: 0.2s; }
+.ai-typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes aiBounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Suggestions */
+.ai-suggestions {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  padding: 6px 14px 8px;
+  flex-shrink: 0;
+  background: var(--bs-body-bg, #f5f5f9);
+}
+
+/* Input */
+.ai-chat-input-wrap {
+  display: flex; padding: 10px 14px; gap: 8px;
+  border-top: 1px solid var(--bs-border-color, #e7e7e8);
+  flex-shrink: 0; align-items: center;
+}
+.ai-chat-input-wrap input {
+  flex: 1; border: 1px solid var(--bs-border-color, #e7e7e8);
+  border-radius: 1.5rem; padding: 7px 14px;
+  font-size: 0.82rem; outline: none;
+  background: transparent; color: inherit;
+  transition: border-color 0.2s;
+}
+.ai-chat-input-wrap input:focus { border-color: #666cff; }
+.ai-chat-input-wrap .btn-send {
+  width: 36px; height: 36px; padding: 0;
+  border-radius: 50%; display: flex;
+  align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Toast */
+.ai-toast {
+  position: fixed;
+  bottom: 100px;
+  right: 40px;
+  background: #333;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  z-index: 9999;
+  animation: aiToastIn 0.3s ease;
+  pointer-events: none;
+}
+@keyframes aiToastIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  #ai-chat-panel {
+    bottom: 0; right: 0;
+    width: 100vw; height: 100vh;
+    max-height: 100vh; max-width: 100vw;
+    border-radius: 0;
+  }
+  .ai-chat-header { border-radius: 0; }
+  #ai-chat-fab { bottom: 16px; right: 16px; }
+}
+</style>
+
+<!-- FAB Button -->
+<button id="ai-chat-fab" class="btn btn-primary shadow" title="AI Chat Assistant" aria-label="Buka AI Chat">
+  <i class="ri-robot-2-line"></i>
+</button>
+
+<!-- Chat Panel -->
+<div id="ai-chat-panel" class="card shadow-lg">
+  <!-- Header -->
+  <div class="ai-chat-header">
+    <div class="ai-chat-header-avatar">
+      <i class="ri-robot-2-line"></i>
+    </div>
+    <div class="ai-chat-header-info">
+      <h6>{{ ai_name|default:"AI Assistant" }}</h6>
+      <small>SIMKOS Software</small>
+    </div>
+    <div class="ai-chat-header-actions">
+      <button class="btn" id="aiClearHistory" title="Hapus riwayat chat">
+        <i class="ri-delete-bin-line"></i>
+      </button>
+      <button class="btn" id="aiDownloadTxt" title="Download chat sebagai TXT">
+        <i class="ri-download-2-line"></i>
+      </button>
+      <button class="btn" id="aiCloseChat" title="Tutup chat">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+  </div>
+
+
+  <!-- Messages -->
+  <div class="ai-chat-messages" id="aiChatMessages"></div>
+
+  <!-- Quick Suggestions -->
+  <div class="ai-suggestions" id="aiSuggestions">
+    <button class="btn btn-outline-primary btn-xs rounded-pill" data-q="Bantuan fitur ERP"><i class="ri-question-line me-1"></i>Bantuan ?</button>
+  </div>
+
+  <!-- Input -->
+  <div class="ai-chat-input-wrap">
+    <input type="text" class="form-control-sm" id="aiChatInput" placeholder="Ketik pertanyaan..." autocomplete="off" maxlength="500">
+    <button class="btn btn-primary btn-send" id="aiChatSend" title="Kirim">
+      <i class="ri-send-plane-fill" style="font-size: 14px;"></i>
+    </button>
+  </div>
+</div>
+
+<script>
+(function() {
+  var fab = document.getElementById('ai-chat-fab');
+  var panel = document.getElementById('ai-chat-panel');
+  var msgArea = document.getElementById('aiChatMessages');
+  var input = document.getElementById('aiChatInput');
+  var sendBtn = document.getElementById('aiChatSend');
+  var suggestions = document.getElementById('aiSuggestions');
+  var isLoading = false;
+  var chatOpened = false;  // Track if chat was opened the first time
+
+  // Simpan riwayat untuk download TXT
+  var chatHistory = [];
+
+  // Toggle panel — buka chat
+  fab.addEventListener('click', function() {
+    panel.classList.add('visible');
+    fab.style.display = 'none';
+    setTimeout(function(){ input.focus(); }, 200);
+
+    // Saat pertama kali buka: load history + insight
+    if (!chatOpened) {
+      chatOpened = true;
+      loadHistory();
+    }
+  });
+
+  // Close button di header — tutup chat
+  document.getElementById('aiCloseChat').addEventListener('click', function() {
+    panel.classList.remove('visible');
+    fab.style.display = '';
+  });
+
+  // ═══════ LOAD HISTORY DARI DATABASE ═══════
+  function loadHistory() {
+    fetch('/ai/history/', { method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.messages && data.messages.length > 0) {
+        // Tampilkan pesan dari DB
+        data.messages.forEach(function(msg) {
+          addMsg(msg.message, msg.role === 'user' ? 'user' : 'bot', msg.id, true);
+        });
+        if (suggestions) suggestions.style.display = 'none';
+      } else {
+        // Tidak ada history, tampilkan welcome message
+        addMsg('Halo! 👋 Saya AI Assistant SIMKOS. Tanyakan apa saja tentang data bisnis kost Anda — properti, kamar, penyewa, tagihan, pendapatan, dan lainnya!', 'bot', null, true);
+      }
+    })
+    .catch(function(err) {
+      console.error('[AI History]', err);
+      addMsg('Halo! 👋 Saya AI Assistant SIMKOS. Tanyakan apa saja tentang data bisnis kost Anda — properti, kamar, penyewa, tagihan, pendapatan, dan lainnya!', 'bot', null, true);
+    });
+  }
+
+
+  // ═══════ SEND MESSAGE ═══════
+  function sendMessage(text) {
+    if (!text || isLoading) return;
+    text = text.trim();
+    if (!text) return;
+
+    addMsg(text, 'user');
+    input.value = '';
+    if (suggestions) suggestions.style.display = 'none';
+
+    isLoading = true;
+    sendBtn.disabled = true;
+    var typingEl = showTyping();
+
+    var csrfToken = getCsrfToken();
+
+    fetch('/ai/chat/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({ message: text }),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      hideTyping(typingEl);
+      if (data.error) {
+        addMsg('⚠️ ' + data.error, 'bot');
+      } else {
+        addMsg(data.response, 'bot', data.chat_id);
+      }
+    })
+    .catch(function(err) {
+      hideTyping(typingEl);
+      addMsg('❌ Gagal menghubungi AI. Periksa koneksi internet.', 'bot');
+      console.error('[AI Chat]', err);
+    })
+    .finally(function() {
+      isLoading = false;
+      sendBtn.disabled = false;
+    });
+  }
+
+  // ═══════ MARKDOWN → HTML PARSER ═══════
+  function parseMarkdown(text) {
+    var lines = text.split('\n');
+    var html = '';
+    var inTable = false;
+    var tableHtml = '';
+    var headerDone = false;
+
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+
+      if (line.match(/^\|(.+)\|$/)) {
+        if (line.match(/^[\s\-:|]+$/)) {
+          headerDone = true;
+          continue;
+        }
+
+        if (!inTable) {
+          inTable = true;
+          tableHtml += '<div class="ai-table-scroll"><table>';
+          headerDone = false;
+        }
+
+        var cells = line.split('|').filter(function(c, idx, arr) {
+          return idx > 0 && idx < arr.length - 1;
+        });
+
+        if (!headerDone) {
+          tableHtml += '<thead><tr>';
+          cells.forEach(function(c) {
+            tableHtml += '<th>' + escapeHtml(c.trim()) + '</th>';
+          });
+          tableHtml += '</tr></thead><tbody>';
+        } else {
+          tableHtml += '<tr>';
+          cells.forEach(function(c) {
+            tableHtml += '<td>' + escapeHtml(c.trim()) + '</td>';
+          });
+          tableHtml += '</tr>';
+        }
+      } else {
+        if (inTable) {
+          tableHtml += '</tbody></table></div>';
+          html += tableHtml;
+          tableHtml = '';
+          inTable = false;
+          headerDone = false;
+        }
+        html += parseLine(line) + '<br>';
+      }
+    }
+
+    if (inTable) {
+      tableHtml += '</tbody></table></div>';
+      html += tableHtml;
+    }
+
+    html = html.replace(/<br>$/, '');
+    return html;
+  }
+
+  function parseLine(line) {
+    if (!line) return '';
+    // Strip arrow characters before links
+    line = line.replace(/→\s*/g, '');
+    // Markdown links: [text](url) → clickable <a> tags
+    line = line.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="ai-link" style="color:#666cff;text-decoration:underline;font-weight:500;">$1</a>');
+    line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    line = line.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    line = line.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+    if (line.match(/^[\-\*]\s+/)) {
+      line = '• ' + line.replace(/^[\-\*]\s+/, '');
+    }
+    var numMatch = line.match(/^(\d+)\.\s+/);
+    if (numMatch) {
+      line = numMatch[1] + '. ' + line.replace(/^\d+\.\s+/, '');
+    }
+    return line;
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ═══════ ADD MESSAGE WITH ACTIONS ═══════
+  function addMsg(text, type, chatId, isHistory) {
+    // Simpan ke local history (untuk download TXT)
+    chatHistory.push({
+      type: type,
+      text: text,
+      time: new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})
+    });
+
+    var wrapper = document.createElement('div');
+    wrapper.className = 'ai-msg-wrapper ' + (type === 'user' ? 'user-wrap' : 'bot-wrap');
+
+    var bubble = document.createElement('div');
+    bubble.className = 'ai-msg ' + type;
+    if (type === 'bot') bubble.className += ' card shadow-none mb-0';
+
+    if (type === 'bot') {
+      bubble.innerHTML = parseMarkdown(text);
+    } else {
+      bubble.textContent = text;
+    }
+
+    bubble.setAttribute('data-raw', text);
+    if (chatId) bubble.setAttribute('data-chat-id', chatId);
+    wrapper.appendChild(bubble);
+
+    // Action buttons
+    var actions = document.createElement('div');
+    actions.className = 'ai-msg-actions';
+
+    if (type === 'bot') {
+      // Copy button
+      var copyBtn = document.createElement('button');
+      copyBtn.className = 'msg-action-btn';
+      copyBtn.innerHTML = '<i class="ri-file-copy-line"></i> Salin';
+      copyBtn.title = 'Salin teks';
+      copyBtn.addEventListener('click', function() {
+        copyToClipboard(text);
+        copyBtn.innerHTML = '<i class="ri-check-line"></i> Tersalin!';
+        copyBtn.classList.add('copied');
+        setTimeout(function() {
+          copyBtn.innerHTML = '<i class="ri-file-copy-line"></i> Salin';
+          copyBtn.classList.remove('copied');
+        }, 2000);
+      });
+      actions.appendChild(copyBtn);
+
+      // Feedback 👍
+      var thumbUp = document.createElement('button');
+      thumbUp.className = 'msg-action-btn';
+      thumbUp.innerHTML = '<i class="ri-thumb-up-line"></i>';
+      thumbUp.title = 'Bagus';
+      thumbUp.addEventListener('click', function() {
+        sendFeedback('up', chatId, text);
+        thumbUp.innerHTML = '<i class="ri-thumb-up-fill"></i>';
+        thumbUp.classList.add('fb-active-up');
+        thumbDown.classList.remove('fb-active-down');
+        thumbDown.innerHTML = '<i class="ri-thumb-down-line"></i>';
+      });
+      actions.appendChild(thumbUp);
+
+      // Feedback 👎
+      var thumbDown = document.createElement('button');
+      thumbDown.className = 'msg-action-btn';
+      thumbDown.innerHTML = '<i class="ri-thumb-down-line"></i>';
+      thumbDown.title = 'Kurang';
+      thumbDown.addEventListener('click', function() {
+        sendFeedback('down', chatId, text);
+        thumbDown.innerHTML = '<i class="ri-thumb-down-fill"></i>';
+        thumbDown.classList.add('fb-active-down');
+        thumbUp.classList.remove('fb-active-up');
+        thumbUp.innerHTML = '<i class="ri-thumb-up-line"></i>';
+      });
+      actions.appendChild(thumbDown);
+    }
+
+    if (type === 'user') {
+      // Edit button
+      var editBtn = document.createElement('button');
+      editBtn.className = 'msg-action-btn';
+      editBtn.innerHTML = '<i class="ri-edit-line"></i> Edit';
+      editBtn.title = 'Edit & kirim ulang';
+      editBtn.addEventListener('click', function() {
+        startEditMsg(wrapper, bubble, text);
+      });
+      actions.appendChild(editBtn);
+
+      // Copy button for user msg
+      var copyBtn2 = document.createElement('button');
+      copyBtn2.className = 'msg-action-btn';
+      copyBtn2.innerHTML = '<i class="ri-file-copy-line"></i>';
+      copyBtn2.title = 'Salin teks';
+      copyBtn2.addEventListener('click', function() {
+        copyToClipboard(text);
+        showToast('Teks disalin!');
+      });
+      actions.appendChild(copyBtn2);
+    }
+
+    wrapper.appendChild(actions);
+    msgArea.appendChild(wrapper);
+
+    // Hanya scroll otomatis jika bukan loading history
+    if (!isHistory) {
+      msgArea.scrollTop = msgArea.scrollHeight;
+    } else {
+      // Scroll ke bawah setelah semua history dimuat
+      setTimeout(function() { msgArea.scrollTop = msgArea.scrollHeight; }, 100);
+    }
+  }
+
+  // ═══════ SEND FEEDBACK ═══════
+  function sendFeedback(type, chatId, messageText) {
+    var csrfToken = getCsrfToken();
+    fetch('/ai/feedback/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({
+        feedback: type,
+        chat_id: chatId || null,
+        message_text: (messageText || '').substring(0, 500),
+      }),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      showToast(type === 'up' ? '👍 Terima kasih!' : '👎 Akan kami perbaiki!');
+    })
+    .catch(function(err) { console.error('[AI Feedback]', err); });
+  }
+
+  // ═══════ EDIT MESSAGE ═══════
+  function startEditMsg(wrapper, bubble, originalText) {
+    bubble.style.display = 'none';
+
+    var editArea = document.createElement('textarea');
+    editArea.className = 'ai-msg-edit-area';
+    editArea.value = originalText;
+    editArea.rows = Math.min(5, Math.max(2, originalText.split('\n').length));
+
+    var editActions = document.createElement('div');
+    editActions.className = 'ai-msg-edit-actions';
+
+    var cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-outline-secondary btn-xs';
+    cancelBtn.textContent = 'Batal';
+    cancelBtn.addEventListener('click', function() {
+      bubble.style.display = '';
+      editArea.remove();
+      editActions.remove();
+    });
+
+    var saveBtn = document.createElement('button');
+    saveBtn.className = 'btn btn-primary btn-xs';
+    saveBtn.textContent = 'Kirim Ulang';
+    saveBtn.addEventListener('click', function() {
+      var newText = editArea.value.trim();
+      if (!newText) return;
+
+      var siblings = [];
+      var next = wrapper.nextElementSibling;
+      while (next) {
+        siblings.push(next);
+        next = next.nextElementSibling;
+      }
+      siblings.forEach(function(el) { el.remove(); });
+
+      bubble.textContent = newText;
+      bubble.style.display = '';
+      editArea.remove();
+      editActions.remove();
+
+      sendMessage(newText);
+    });
+
+    editActions.appendChild(cancelBtn);
+    editActions.appendChild(saveBtn);
+    wrapper.insertBefore(editArea, wrapper.querySelector('.ai-msg-actions'));
+    wrapper.insertBefore(editActions, wrapper.querySelector('.ai-msg-actions'));
+    editArea.focus();
+    editArea.select();
+  }
+
+  // ═══════ DOWNLOAD TXT ═══════
+  document.getElementById('aiDownloadTxt').addEventListener('click', function() {
+    if (chatHistory.length === 0) {
+      showToast('Belum ada percakapan untuk di-download');
+      return;
+    }
+
+    var lines = [];
+    lines.push('═══════════════════════════════════════════════');
+    lines.push('  RIWAYAT CHAT AI ASSISTANT — SIMKOS Software');
+    lines.push('═══════════════════════════════════════════════');
+    lines.push('Tanggal: ' + new Date().toLocaleDateString('id-ID', {day:'2-digit', month:'long', year:'numeric'}));
+    lines.push('Waktu  : ' + new Date().toLocaleTimeString('id-ID'));
+    lines.push('Total  : ' + chatHistory.length + ' pesan');
+    lines.push('');
+    lines.push('───────────────────────────────────────────────');
+
+    chatHistory.forEach(function(msg) {
+      var role = msg.type === 'user' ? '👤 ANDA' : '🤖 AI ASSISTANT';
+      lines.push('');
+      lines.push('[' + msg.time + '] ' + role + ':');
+      lines.push(msg.text);
+      lines.push('');
+    });
+
+    lines.push('───────────────────────────────────────────────');
+    lines.push('Dihasilkan oleh SIMKOS Software AI Assistant');
+
+    var content = lines.join('\n');
+    var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'AI_Chat_SIMKOS_' + new Date().toISOString().slice(0,10) + '.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('📄 File TXT berhasil di-download!');
+  });
+
+  // ═══════ CLEAR HISTORY ═══════
+  document.getElementById('aiClearHistory').addEventListener('click', function() {
+    if (!confirm('Hapus semua riwayat chat? Tindakan ini tidak bisa dibatalkan.')) return;
+
+    var csrfToken = getCsrfToken();
+    fetch('/ai/clear/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+      body: '{}',
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      // Bersihkan UI
+      msgArea.innerHTML = '';
+      chatHistory.length = 0;
+      addMsg('Halo! 👋 Riwayat chat berhasil dihapus. Tanyakan apa saja!', 'bot', null, true);
+      if (suggestions) suggestions.style.display = '';
+      showToast('🗑️ ' + (data.message || 'Riwayat dihapus'));
+    })
+    .catch(function(err) {
+      console.error('[AI Clear]', err);
+      showToast('❌ Gagal menghapus riwayat');
+    });
+  });
+
+  // ═══════ HELPERS ═══════
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(function() { fallbackCopy(text); });
+    } else {
+      fallbackCopy(text);
+    }
+  }
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch(e) {}
+    document.body.removeChild(ta);
+  }
+
+  function showToast(msg) {
+    var toast = document.createElement('div');
+    toast.className = 'ai-toast';
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(function() { toast.remove(); }, 2000);
+  }
+
+  function showTyping() {
+    var div = document.createElement('div');
+    div.className = 'ai-typing card shadow-none mb-0';
+    div.innerHTML = '<span></span><span></span><span></span>';
+    msgArea.appendChild(div);
+    msgArea.scrollTop = msgArea.scrollHeight;
+    return div;
+  }
+  function hideTyping(el) { if (el && el.parentNode) el.parentNode.removeChild(el); }
+
+  function getCsrfToken() {
+    var name = 'csrftoken';
+    var cookies = document.cookie.split(';');
+    for (var i = 0; i < cookies.length; i++) {
+      var c = cookies[i].trim();
+      if (c.indexOf(name + '=') === 0) return c.substring(name.length + 1);
+    }
+    var el = document.querySelector('[name=csrfmiddlewaretoken]');
+    return el ? el.value : '';
+  }
+
+  sendBtn.addEventListener('click', function() { sendMessage(input.value); });
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(input.value);
+    }
+  });
+
+  if (suggestions) {
+    var btns = suggestions.querySelectorAll('.btn');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener('click', function() {
+        sendMessage(this.getAttribute('data-q'));
+      });
+    }
+  }
+})();
+</script>

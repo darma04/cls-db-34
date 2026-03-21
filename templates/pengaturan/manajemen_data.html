@@ -1,0 +1,949 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   MANAJEMEN DATA - Pengaturan Manajemen Data
+   Halaman untuk manajemen data sistem (backup, restore, dll).
+   ==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block title %}Manajemen Data - Pengaturan{% endblock title %}
+
+{% block vendor_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-bs5/datatables.bootstrap5.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css' %}" />
+<style>
+  /* Border penuh pada action cards (semua sisi) dengan aksen kiri lebih tebal */
+  .action-card-backup { border: 1.5px solid #7367f0 !important; border-left: 4px solid #7367f0 !important; }
+  .action-card-restore { border: 1.5px solid #28c76f !important; border-left: 4px solid #28c76f !important; }
+  .action-card-reset { border: 1.5px solid #ea5455 !important; border-left: 4px solid #ea5455 !important; }
+
+  /* DataTables Custom Styling - sama seperti Daftar Properti */
+  .dataTables_wrapper .dataTables_info {
+      padding: 1rem 1.5rem;
+      font-size: 0.875rem;
+      color: #697a8d;
+  }
+  .dataTables_wrapper .dataTables_paginate {
+      padding: 1rem 1.5rem;
+  }
+  .dataTables_wrapper .dataTables_length,
+  .dataTables_wrapper .dataTables_filter {
+      padding: 0 1.5rem 1rem 1.5rem;
+  }
+  .dataTables_wrapper .dataTables_filter input {
+      border: 1px solid #d9dee3;
+      border-radius: 0.375rem;
+      padding: 0.4375rem 0.875rem;
+  }
+  .dataTables_wrapper .dataTables_length select {
+      border: 1px solid #d9dee3;
+      border-radius: 0.375rem;
+      padding: 0.4375rem 2rem 0.4375rem 0.875rem;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button {
+      padding: 0.438rem 0.875rem;
+      border-radius: 0.375rem;
+      margin: 0 0.125rem;
+      border: none;
+      background: transparent;
+      color: #697a8d;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+      background: #696cff !important;
+      color: white !important;
+      border: none;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.disabled) {
+      background: rgba(105, 108, 255, 0.08) !important;
+      border: none;
+      color: #696cff !important;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+      color: #c7cdd4 !important;
+      cursor: not-allowed;
+  }
+  .card-datatable {
+      padding-bottom: 0;
+  }
+
+  /* Mobile Responsiveness - Horizontal Scroll untuk tabel, tanpa scroll untuk pagination */
+  @media (max-width: 768px) {
+      /* Wrapper luar: sembunyikan overflow agar pagination tidak scroll */
+      .card-datatable {
+          overflow-x: hidden !important;
+          overflow-y: visible !important;
+          -webkit-overflow-scrolling: touch;
+          max-width: 100%;
+      }
+
+      /* Tabel dipaksa lebar agar bisa scroll di dalam .table-responsive */
+      #riwayatTable {
+          min-width: 900px !important;
+          width: 900px !important;
+          table-layout: auto !important;
+      }
+
+      /* DataTables wrapper: sembunyikan overflow */
+      .dataTables_wrapper {
+          overflow-x: hidden !important;
+          max-width: 100% !important;
+          width: 100% !important;
+      }
+
+      /* Row info + pagination: TIDAK boleh overflow */
+      .dataTables_wrapper > .row {
+          overflow-x: hidden !important;
+          margin-left: 0 !important;
+          margin-right: 0 !important;
+          max-width: 100% !important;
+      }
+
+      /* Pagination container */
+      .dataTables_wrapper .dataTables_paginate {
+          overflow-x: hidden !important;
+          max-width: 100% !important;
+          display: flex !important;
+          flex-wrap: wrap !important;
+          justify-content: flex-start !important;
+          gap: 0.25rem;
+      }
+
+      /* Pagination buttons bisa wrap ke baris baru */
+      .dataTables_wrapper .dataTables_paginate span {
+          display: flex !important;
+          flex-wrap: wrap !important;
+          gap: 0.25rem;
+      }
+
+      .dataTables_wrapper .dataTables_paginate .paginate_button {
+          padding: 0.35rem 0.65rem !important;
+          font-size: 0.8rem !important;
+          margin: 0 !important;
+      }
+
+      /* Info text */
+      .dataTables_wrapper .dataTables_info {
+          overflow-x: hidden !important;
+          max-width: 100% !important;
+          font-size: 0.8rem !important;
+          white-space: normal !important;
+          word-wrap: break-word !important;
+      }
+
+      /* Length + Filter row */
+      .dataTables_wrapper .dataTables_length,
+      .dataTables_wrapper .dataTables_filter {
+          overflow-x: hidden !important;
+          max-width: 100% !important;
+      }
+
+      /* Column di dalam row DataTables */
+      .dataTables_wrapper > .row > [class*="col-"] {
+          overflow-x: hidden !important;
+          max-width: 100% !important;
+      }
+
+      /* Tabel cell styling */
+      #riwayatTable th,
+      #riwayatTable td {
+          font-size: 0.8rem;
+          white-space: nowrap;
+          min-width: 80px;
+      }
+      /* Kolom catatan lebih lebar */
+      #riwayatTable th:nth-child(8),
+      #riwayatTable td:nth-child(8) {
+          min-width: 150px;
+      }
+  }
+
+  /* Responsive: mobile stat cards */
+  @media (max-width: 576px) {
+    .container-p-y { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+    .action-card-backup, .action-card-restore, .action-card-reset { border-left-width: 5px !important; }
+    .stat-card .card-body { padding: 0.875rem !important; }
+    .stat-card h4 { font-size: 1.15rem; }
+    .stat-card h6 { font-size: 0.75rem; }
+  }
+
+  /* Responsive: tablet */
+  @media (min-width: 577px) and (max-width: 991px) {
+    .stat-card .card-body { padding: 1rem !important; }
+  }
+
+  /* Hover effect pada action cards */
+  .action-card-backup:hover,
+  .action-card-restore:hover,
+  .action-card-reset:hover {
+    box-shadow: 0 4px 18px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+    transition: all 0.2s ease;
+  }
+</style>
+{% endblock vendor_css %}
+
+{% block vendor_js %}
+{{ block.super }}
+<script src="{% static 'vendor/libs/datatables-bs5/datatables-bootstrap5.js' %}"></script>
+{% endblock vendor_js %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">
+                <i class="ri-database-2-line me-2"></i>Manajemen Data
+            </h4>
+            <p class="text-muted mb-0">Kelola backup, restore, dan reset data sistem</p>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {% if message.tags == 'success' %}
+        <i class="ri-checkbox-circle-line me-2"></i>
+        {% elif message.tags == 'error' %}
+        <i class="ri-error-warning-line me-2"></i>
+        {% elif message.tags == 'warning' %}
+        <i class="ri-alert-line me-2"></i>
+        {% else %}
+        <i class="ri-information-line me-2"></i>
+        {% endif %}
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Info Card: Statistik Database -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-6 mb-4">
+            <div class="card h-100 stat-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="avatar me-2 me-sm-3">
+                            <span class="avatar-initial rounded bg-label-primary">
+                                <i class="ri-database-2-line ri-24px"></i>
+                            </span>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 text-muted">Ukuran Database</h6>
+                            <h4 class="mb-0" id="dbSizeDisplay">{{ db_size }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-6 mb-4">
+            <div class="card h-100 stat-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="avatar me-2 me-sm-3">
+                            <span class="avatar-initial rounded bg-label-success">
+                                <i class="ri-archive-line ri-24px"></i>
+                            </span>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 text-muted">Master Data</h6>
+                            <h4 class="mb-0" id="totalMasterDisplay">{{ total_master }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-6 mb-4">
+            <div class="card h-100 stat-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="avatar me-2 me-sm-3">
+                            <span class="avatar-initial rounded bg-label-warning">
+                                <i class="ri-exchange-line ri-24px"></i>
+                            </span>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 text-muted">Total Transaksi</h6>
+                            <h4 class="mb-0" id="totalTransaksiDisplay">{{ total_transaksi }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-6 mb-4">
+            <div class="card h-100 stat-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="avatar me-2 me-sm-3">
+                            <span class="avatar-initial rounded bg-label-info">
+                                <i class="ri-time-line ri-24px"></i>
+                            </span>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 text-muted">Backup Terakhir</h6>
+                            <h5 class="mb-0">
+                                {% if last_backup %}
+                                {{ last_backup.dibuat_pada|date:"d/m/Y H:i" }}
+                                {% else %}
+                                <span class="text-muted">Belum pernah</span>
+                                {% endif %}
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Cards -->
+    <div class="row mb-4">
+        <!-- Backup Card -->
+        {% if can_create.pengaturan %}
+        <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+            <div class="card h-100 action-card-backup">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="avatar avatar-lg me-3">
+                            <span class="avatar-initial rounded bg-label-primary">
+                                <i class="ri-download-cloud-2-line ri-28px"></i>
+                            </span>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">Backup Semua Data</h5>
+                            <p class="text-muted mb-0 small">Download seluruh database ke file JSON</p>
+                        </div>
+                    </div>
+                    <p class="mb-3">
+                        Buat cadangan <strong>seluruh database</strong> termasuk produk, klien, lisensi, pembelian, pengaturan, dan user. 
+                        File backup bisa digunakan untuk restore di kemudian hari.
+                    </p>
+                    <form method="post" action="{% url 'pengaturan:backup_data' %}" id="backupForm">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary w-100" id="btnBackup">
+                            <i class="ri-download-cloud-2-line me-1"></i>
+                            Download Backup
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Restore Card -->
+        {% if can_create.pengaturan %}
+        <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+            <div class="card h-100 action-card-restore">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="avatar avatar-lg me-3">
+                            <span class="avatar-initial rounded bg-label-success">
+                                <i class="ri-upload-cloud-2-line ri-28px"></i>
+                            </span>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">Restore Data</h5>
+                            <p class="text-muted mb-0 small">Upload file backup untuk memulihkan data</p>
+                        </div>
+                    </div>
+                    <p class="mb-3">
+                        Pulihkan <strong>seluruh data</strong> (Produk, Klien, Lisensi, Pembelian, user) dari file backup JSON/SQLite. 
+                        Data lama akan ditimpa dengan data dari file backup.
+                    </p>
+                    <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#restoreModal">
+                        <i class="ri-upload-cloud-2-line me-1"></i>
+                        Upload & Restore
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Reset Card -->
+        {% if can_delete.pengaturan %}
+        <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+            <div class="card h-100 action-card-reset">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="avatar avatar-lg me-3">
+                            <span class="avatar-initial rounded bg-label-danger">
+                                <i class="ri-delete-bin-7-line ri-28px"></i>
+                            </span>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">Hapus Semua Data</h5>
+                            <p class="text-muted mb-0 small">Hapus SEMUA data yang ada!</p>
+                        </div>
+                    </div>
+                    <p class="mb-3">
+                        Hapus <strong class="text-danger">SEMUA DATA</strong> di database (Produk, Klien, Lisensi, Pembelian, Log). 
+                        Hanya akun Anda yang dipertahankan.
+                    </p>
+                    <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#resetModal">
+                        <i class="ri-delete-bin-7-line me-1"></i>
+                        Hapus Semua Data
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Detail Statistik -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="ri-bar-chart-box-line me-2"></i>Detail Statistik Database</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-lg-6">
+                    <h6 class="text-muted mb-3"><i class="ri-archive-line me-1"></i> Data Utama</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0">
+                            <tbody>
+                                <tr><td class="w-50">Produk Lisensi</td><td class="fw-bold" id="statProduk">{{ stats.produk }}</td></tr>
+                                <tr><td>Klien / Pelanggan</td><td class="fw-bold" id="statKlien">{{ stats.klien }}</td></tr>
+                                <tr><td>License Keys</td><td class="fw-bold" id="statLisensi">{{ stats.lisensi }}</td></tr>
+                                <tr><td>User Admin</td><td class="fw-bold" id="statUser">{{ stats.user }}</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <h6 class="text-muted mb-3"><i class="ri-exchange-line me-1"></i> Data Operasional & Log</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0">
+                            <tbody>
+                                <tr><td class="w-50">Total Transaksi Pembelian</td><td class="fw-bold" id="statPembelian">{{ stats.pembelian }}</td></tr>
+                                <tr><td>Item Pembelian</td><td class="fw-bold" id="statItemPembelian">{{ stats.item_pembelian }}</td></tr>
+                                <tr><td>Activity Log</td><td class="fw-bold" id="statActivityLog">{{ stats.activity_log }}</td></tr>
+                                <tr><td>Log Notifikasi</td><td class="fw-bold" id="statLogNotifikasi">{{ stats.log_notifikasi }}</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bersihkan Data Log -->
+    {% if can_delete.pengaturan %}
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="ri-brush-line me-2"></i>Bersihkan Data Log</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <!-- Bersihkan Log Aktivitas -->
+                <div class="col-lg-6 col-md-6">
+                    <div class="card border shadow-none h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar me-3">
+                                    <span class="avatar-initial rounded bg-label-warning">
+                                        <i class="ri-history-line ri-24px"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">Log Aktivitas</h6>
+                                    <small class="text-muted">{{ stats.activity_log }} record</small>
+                                </div>
+                            </div>
+                            <p class="mb-3 small text-muted">
+                                Hapus semua riwayat log aktivitas user (login, CRUD, sewa, export, dll). 
+                                Data ini terhubung dengan halaman <strong>Log Aktivitas</strong>.
+                            </p>
+                            <button type="button" class="btn btn-warning btn-sm w-100" 
+                                    data-bs-toggle="modal" data-bs-target="#bersihkanLogAktivitasModal"
+                                    {% if stats.activity_log == 0 %}disabled{% endif %}>
+                                <i class="ri-brush-line me-1"></i>Bersihkan Log Aktivitas
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Bersihkan Log Notifikasi -->
+                <div class="col-lg-6 col-md-6">
+                    <div class="card border shadow-none h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar me-3">
+                                    <span class="avatar-initial rounded bg-label-info">
+                                        <i class="ri-telegram-line ri-24px"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">Log Notifikasi Telegram</h6>
+                                    <small class="text-muted">{{ stats.log_notifikasi }} record</small>
+                                </div>
+                            </div>
+                            <p class="mb-3 small text-muted">
+                                Hapus semua riwayat log pengiriman notifikasi Telegram (sukses/gagal). 
+                                Data ini terhubung dengan halaman <strong>Log Notifikasi</strong> di CRUD Telegram.
+                            </p>
+                            <button type="button" class="btn btn-info btn-sm w-100" 
+                                    data-bs-toggle="modal" data-bs-target="#bersihkanLogNotifikasiModal"
+                                    {% if stats.log_notifikasi == 0 %}disabled{% endif %}>
+                                <i class="ri-brush-line me-1"></i>Bersihkan Log Notifikasi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Riwayat Backup/Restore/Reset -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="ri-history-line me-2"></i>Riwayat Aktivitas</h5>
+        </div>
+        <div class="card-datatable">
+                <table class="table table-hover" id="riwayatTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Tanggal</th>
+                            <th>Jenis</th>
+                            <th>Nama File</th>
+                            <th>Ukuran</th>
+                            <th>Status</th>
+                            <th>User</th>
+                            <th>Catatan</th>
+                            {% if can_delete.pengaturan %}
+                            <th>Aksi</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for riwayat in riwayat_list %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ riwayat.dibuat_pada|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if riwayat.jenis == 'backup' %}
+                                <span class="badge bg-label-primary"><i class="ri-download-cloud-2-line me-1"></i>Backup</span>
+                                {% elif riwayat.jenis == 'restore' %}
+                                <span class="badge bg-label-success"><i class="ri-upload-cloud-2-line me-1"></i>Restore</span>
+                                {% elif riwayat.jenis == 'reset' %}
+                                <span class="badge bg-label-danger"><i class="ri-delete-bin-7-line me-1"></i>Reset</span>
+                                {% endif %}
+                            </td>
+                            <td><code>{{ riwayat.nama_file }}</code></td>
+                            <td>{{ riwayat.ukuran_display }}</td>
+                            <td>
+                                {% if riwayat.status == 'sukses' %}
+                                <span class="badge bg-success"><i class="ri-checkbox-circle-line me-1"></i>Sukses</span>
+                                {% else %}
+                                <span class="badge bg-danger"><i class="ri-close-circle-line me-1"></i>Gagal</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ riwayat.dibuat_oleh.username|default:"-" }}</td>
+                            <td>
+                                <span class="text-truncate d-inline-block" style="max-width: 200px;" title="{{ riwayat.catatan }}">
+                                    {{ riwayat.catatan|default:"-"|truncatechars:50 }}
+                                </span>
+                            </td>
+                            {% if can_delete.pengaturan %}
+                            <td>
+                                <button type="button" class="btn btn-sm btn-icon btn-text-danger btn-hapus-riwayat" title="Hapus"
+                                        data-id="{{ riwayat.pk }}" data-tanggal="{{ riwayat.dibuat_pada|date:'d/m/Y H:i' }}">
+                                    <i class="ri-delete-bin-line"></i>
+                                </button>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+
+                    </tbody>
+                </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Restore -->
+<div class="modal fade" id="restoreModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'pengaturan:restore_data' %}" enctype="multipart/form-data" id="restoreForm">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="ri-upload-cloud-2-line me-2 text-success"></i>Restore Data
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="ri-alert-line me-1"></i>
+                        <strong>Perhatian!</strong> Data yang ada saat ini akan ditimpa dengan data dari file backup. 
+                        Pastikan Anda sudah membuat backup terlebih dahulu.
+                    </div>
+                    <div class="mb-3">
+                        <label for="backup_file" class="form-label">Pilih File Backup (.json)</label>
+                        <input type="file" class="form-control" id="backup_file" name="backup_file" accept=".json" required>
+                        <div class="form-text">Hanya file .json yang diperbolehkan</div>
+                    </div>
+                    <div id="fileInfo" class="d-none">
+                        <div class="d-flex align-items-center p-2 bg-light rounded">
+                            <i class="ri-file-text-line ri-24px me-2 text-primary"></i>
+                            <div>
+                                <span id="fileName" class="fw-bold"></span><br>
+                                <small id="fileSize" class="text-muted"></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success" id="btnRestore">
+                        <i class="ri-upload-cloud-2-line me-1"></i>Restore Sekarang
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Reset -->
+<div class="modal fade" id="resetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'pengaturan:reset_data' %}" id="resetForm">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="ri-error-warning-line me-2 text-danger"></i>Hapus Semua Data
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="ri-error-warning-line me-1"></i>
+                        <strong>PERINGATAN!</strong> Tindakan ini akan menghapus <strong>SEMUA DATA</strong> dan <strong>TIDAK DAPAT DIBATALKAN!</strong>
+                    </div>
+                    <p>Data berikut akan <strong class="text-danger">DIHAPUS PERMANEN</strong>:</p>
+                    <ul class="list-unstyled mb-3">
+                        <li><i class="ri-close-circle-line text-danger me-1"></i> Produk Lisensi ({{ stats.produk }} record)</li>
+                        <li><i class="ri-close-circle-line text-danger me-1"></i> Klien ({{ stats.klien }} record)</li>
+                        <li><i class="ri-close-circle-line text-danger me-1"></i> License Keys ({{ stats.lisensi }} record)</li>
+                        <li><i class="ri-close-circle-line text-danger me-1"></i> Transaksi Pembelian Lisensi ({{ stats.pembelian }} record)</li>
+                        <li><i class="ri-close-circle-line text-danger me-1"></i> Item Pembelian ({{ stats.item_pembelian }} record)</li>
+                        <li><i class="ri-close-circle-line text-danger me-1"></i> Template Cetak</li>
+                        <li><i class="ri-close-circle-line text-danger me-1"></i> Activity Log, Log Notifikasi, Riwayat Backup</li>
+                        <li><i class="ri-close-circle-line text-danger me-1"></i> Semua User (kecuali akun Anda)</li>
+                    </ul>
+                    <p>Yang <strong class="text-success">DIPERTAHANKAN</strong>:</p>
+                    <ul class="list-unstyled mb-3">
+                        <li><i class="ri-checkbox-circle-line text-success me-1"></i> Akun Anda ({{ request.user.username }})</li>
+                        <li><i class="ri-checkbox-circle-line text-success me-1"></i> Pengaturan Perusahaan</li>
+                    </ul>
+                    <hr>
+                    <div class="mb-0">
+                        <label for="konfirmasi" class="form-label">
+                            Ketik <strong class="text-danger">HAPUS SEMUA</strong> untuk konfirmasi:
+                        </label>
+                        <input type="text" class="form-control" id="konfirmasi" name="konfirmasi" 
+                               placeholder="Ketik HAPUS SEMUA" autocomplete="off" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger" id="btnReset" disabled>
+                        <i class="ri-delete-bin-7-line me-1"></i>Hapus Semua Data Sekarang
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Hapus Riwayat -->
+{% if can_delete.pengaturan %}
+<div class="modal fade" id="hapusRiwayatModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-delete-bin-line me-2 text-danger"></i>Hapus Riwayat
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <div class="avatar avatar-lg mx-auto mb-3">
+                        <span class="avatar-initial rounded-circle bg-label-danger">
+                            <i class="ri-delete-bin-line ri-24px"></i>
+                        </span>
+                    </div>
+                    <h5>Konfirmasi Hapus</h5>
+                    <p class="text-muted mb-0">Apakah Anda yakin ingin menghapus riwayat ini?</p>
+                    <p class="text-muted mb-0" id="hapusRiwayatInfo"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Batal</button>
+                <form method="post" id="hapusRiwayatForm" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="ri-delete-bin-line me-1"></i>Ya, Hapus
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal Bersihkan Log Aktivitas -->
+{% if can_delete.pengaturan %}
+<div class="modal fade" id="bersihkanLogAktivitasModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="#">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="ri-history-line me-2 text-warning"></i>Bersihkan Log Aktivitas
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="ri-alert-line me-1"></i>
+                        <strong>Perhatian!</strong> Tindakan ini akan menghapus semua data log aktivitas secara permanen.
+                    </div>
+                    <p>Data berikut akan <strong class="text-danger">DIHAPUS</strong>:</p>
+                    <ul class="list-unstyled mb-3">
+                        <li><i class="ri-close-circle-line text-danger me-1"></i> <strong>{{ stats.activity_log }}</strong> record log aktivitas</li>
+                        <li><i class="ri-close-circle-line text-danger me-1"></i> Riwayat login, CRUD, stok, export</li>
+                    </ul>
+                    <p class="text-muted small mb-0">
+                        <i class="ri-information-line me-1"></i>
+                        Data log aktivitas terhubung dengan halaman <strong>Log Aktivitas</strong>. 
+                        Setelah dihapus, halaman tersebut akan kosong.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="ri-brush-line me-1"></i>Ya, Bersihkan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal Bersihkan Log Notifikasi -->
+{% if can_delete.pengaturan %}
+<div class="modal fade" id="bersihkanLogNotifikasiModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="#">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="ri-telegram-line me-2 text-info"></i>Bersihkan Log Notifikasi
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="ri-information-line me-1"></i>
+                        <strong>Perhatian!</strong> Tindakan ini akan menghapus semua data log notifikasi Telegram secara permanen.
+                    </div>
+                    <p>Data berikut akan <strong class="text-danger">DIHAPUS</strong>:</p>
+                    <ul class="list-unstyled mb-3">
+                        <li><i class="ri-close-circle-line text-danger me-1"></i> <strong>{{ stats.log_notifikasi }}</strong> record log notifikasi</li>
+                        <li><i class="ri-close-circle-line text-danger me-1"></i> Riwayat pengiriman notifikasi (sukses/gagal)</li>
+                    </ul>
+                    <p class="text-muted small mb-0">
+                        <i class="ri-information-line me-1"></i>
+                        Data log notifikasi terhubung dengan halaman <strong>Log Notifikasi</strong> di CRUD Telegram. 
+                        Setelah dihapus, halaman tersebut akan kosong.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-info">
+                        <i class="ri-brush-line me-1"></i>Ya, Bersihkan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock content %}
+
+{% block page_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // DataTable untuk riwayat
+    if (document.getElementById('riwayatTable') && typeof $.fn.DataTable !== 'undefined') {
+        $('#riwayatTable').DataTable({
+            responsive: false,
+            ordering: true,
+            order: [[1, 'desc']],
+            language: {
+                search: "Cari:",
+                lengthMenu: "Tampilkan _MENU_ data",
+                info: "Menampilkan _START_ - _END_ dari _TOTAL_ data",
+                infoEmpty: "Tidak ada data",
+                infoFiltered: "(difilter dari _MAX_ total data)",
+                zeroRecords: "Tidak ditemukan data yang cocok",
+                emptyTable: "Belum ada riwayat aktivitas backup/restore/reset",
+                paginate: {
+                    first: "Pertama",
+                    last: "Terakhir",
+                    next: "Berikutnya",
+                    previous: "Sebelumnya"
+                }
+            },
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Semua"]],
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>><"table-responsive"rt><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+        });
+    }
+
+    // Konfirmasi Hapus Semua Data — enable button hanya jika ketik HAPUS SEMUA
+    var konfirmasiInput = document.getElementById('konfirmasi');
+    var btnReset = document.getElementById('btnReset');
+    if (konfirmasiInput && btnReset) {
+        konfirmasiInput.addEventListener('input', function() {
+            btnReset.disabled = (this.value !== 'HAPUS SEMUA');
+        });
+    }
+
+    // Reset form ketika modal ditutup
+    var resetModal = document.getElementById('resetModal');
+    if (resetModal) {
+        resetModal.addEventListener('hidden.bs.modal', function() {
+            konfirmasiInput.value = '';
+            btnReset.disabled = true;
+        });
+    }
+
+    // Handler tombol hapus riwayat — buka modal konfirmasi
+    document.querySelectorAll('.btn-hapus-riwayat').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var id = this.getAttribute('data-id');
+            var tanggal = this.getAttribute('data-tanggal');
+            var form = document.getElementById('hapusRiwayatForm');
+            var info = document.getElementById('hapusRiwayatInfo');
+            
+            // Set action URL form secara dinamis
+            form.action = '/pengaturan/manajemen-data/riwayat/' + id + '/hapus/';
+            // Tampilkan info tanggal di modal
+            if (info) info.textContent = 'Tanggal: ' + tanggal;
+            
+            // Buka modal
+            new bootstrap.Modal(document.getElementById('hapusRiwayatModal')).show();
+        });
+    });
+
+    // File info display untuk restore
+    var fileInput = document.getElementById('backup_file');
+    if (fileInput) {
+        fileInput.addEventListener('change', function() {
+            var fileInfo = document.getElementById('fileInfo');
+            var fileName = document.getElementById('fileName');
+            var fileSize = document.getElementById('fileSize');
+            
+            if (this.files.length > 0) {
+                var file = this.files[0];
+                fileName.textContent = file.name;
+                
+                var size = file.size;
+                if (size < 1024) {
+                    fileSize.textContent = size + ' B';
+                } else if (size < 1024 * 1024) {
+                    fileSize.textContent = (size / 1024).toFixed(1) + ' KB';
+                } else {
+                    fileSize.textContent = (size / (1024 * 1024)).toFixed(1) + ' MB';
+                }
+                
+                fileInfo.classList.remove('d-none');
+            } else {
+                fileInfo.classList.add('d-none');
+            }
+        });
+    }
+
+    // Status loading untuk tombol-tombol
+    var backupForm = document.getElementById('backupForm');
+    if (backupForm) {
+        backupForm.addEventListener('submit', function() {
+            var btn = document.getElementById('btnBackup');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Memproses...';
+            btn.disabled = true;
+            // Re-enable setelah 5 detik (file download)
+            setTimeout(function() {
+                btn.innerHTML = '<i class="ri-download-cloud-2-line me-1"></i>Download Backup';
+                btn.disabled = false;
+            }, 5000);
+        });
+    }
+
+    var restoreForm = document.getElementById('restoreForm');
+    if (restoreForm) {
+        restoreForm.addEventListener('submit', function() {
+            var btn = document.getElementById('btnRestore');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Memulihkan...';
+            btn.disabled = true;
+        });
+    }
+
+    var resetForm = document.getElementById('resetForm');
+    if (resetForm) {
+        resetForm.addEventListener('submit', function() {
+            var btn = document.getElementById('btnReset');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Mereset...';
+            btn.disabled = true;
+        });
+    }
+
+    // ── Auto-refresh ukuran database & statistik (setiap 30 detik) ──
+    function refreshDbStats() {
+        fetch('#')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                // Update ukuran database
+                var dbEl = document.getElementById('dbSizeDisplay');
+                if (dbEl) dbEl.textContent = data.db_size;
+
+                // Update total master & transaksi
+                var masterEl = document.getElementById('totalMasterDisplay');
+                if (masterEl) masterEl.textContent = data.total_master;
+                var transEl = document.getElementById('totalTransaksiDisplay');
+                if (transEl) transEl.textContent = data.total_transaksi;
+
+                // Update tabel statistik detail
+                var s = data.stats || {};
+                var mapping = {
+                    'statProperti': s.properti, 'statTipeKamar': s.tipe_kamar,
+                    'statKamar': s.kamar, 'statPenyewa': s.penyewa,
+                    'statKategoriBiaya': s.kategori_biaya, 'statKaryawan': s.karyawan,
+                    'statDepartemen': s.departemen, 'statUser': s.user,
+                    'statKontrakSewa': s.kontrak_sewa, 'statTagihanSewa': s.tagihan_sewa,
+                    'statPembayaranSewa': s.pembayaran_sewa, 'statBiaya': s.biaya,
+                    'statActivityLog': s.activity_log, 'statLogNotifikasi': s.log_notifikasi
+                };
+                for (var id in mapping) {
+                    var el = document.getElementById(id);
+                    if (el && mapping[id] !== undefined) el.textContent = mapping[id];
+                }
+            })
+            .catch(function(err) { console.warn('Gagal refresh stats:', err); });
+    }
+
+    // Refresh pertama kali saat halaman dimuat, lalu setiap 30 detik
+    refreshDbStats();
+    setInterval(refreshDbStats, 30000);
+});
+</script>
+{% endblock page_js %}

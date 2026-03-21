@@ -1,0 +1,418 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   PENGATURAN TELEGRAM - Pengaturan Bot Telegram
+   Halaman pengaturan integrasi bot Telegram.
+   Field: token bot, chat ID, notifikasi aktif.
+   Fitur: test kirim pesan, konfigurasi event.
+   ==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block title %}Pengaturan Telegram - Automasi{% endblock title %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="py-3 mb-4">
+        <span class="text-muted fw-light">Automasi /</span> Pengaturan Telegram
+    </h4>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <form method="post" id="telegramForm">
+        {% csrf_token %}
+
+        <div class="row">
+            <!-- Form Pengaturan (Kiri) -->
+            <div class="col-lg-8">
+                <!-- Konfigurasi Bot -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Konfigurasi Bot</h5>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="aktif" name="aktif"
+                                   {% if pengaturan.aktif %}checked{% endif %}>
+                            <label class="form-check-label" for="aktif">
+                                {% if pengaturan.aktif %}
+                                <span class="badge bg-label-success">Aktif</span>
+                                {% else %}
+                                <span class="badge bg-label-secondary">Nonaktif</span>
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="mb-3 col-md-12">
+                                <label for="bot_token" class="form-label">Bot Token <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="bot_token" name="bot_token"
+                                       value="{{ pengaturan.bot_token }}"
+                                       placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+                                       onfocus="this.select()">
+                                <small class="text-muted">Dapatkan dari <a href="https://t.me/BotFather" target="_blank">@BotFather</a> di Telegram</small>
+                            </div>
+                            <div class="mb-3 col-md-12">
+                                <label for="chat_id" class="form-label">Chat ID <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="chat_id" name="chat_id"
+                                           value="{{ pengaturan.chat_id }}"
+                                           placeholder="-1001234567890"
+                                           onfocus="this.select()">
+                                    <button type="button" class="btn btn-outline-secondary" id="btnClearChatId" title="Kosongkan Chat ID">
+                                        <i class="ri-close-line"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info" id="btnDeteksiChatId" title="Deteksi Chat ID otomatis dari pesan masuk ke bot">
+                                        <i class="ri-search-eye-line me-1"></i>Deteksi
+                                    </button>
+                                </div>
+                                <small class="text-muted">Chat ID grup atau personal. Klik "Deteksi" setelah mengirim <code>/start</code> ke bot Anda, atau gunakan <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a></small>
+                                <!-- Daftar Chat Terdeteksi -->
+                                <div id="detectedChatsList" class="mt-2" style="display:none;">
+                                    <small class="text-primary fw-bold d-block mb-2"><i class="ri-list-check me-1"></i>Pilih Chat ID yang ingin digunakan:</small>
+                                    <div id="chatItemsContainer"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Toggle Notifikasi -->
+                <div class="card mb-4">
+                    <h5 class="card-header">Notifikasi per Transaksi</h5>
+                    <div class="card-body">
+                        <div class="alert alert-primary" role="alert">
+                            <i class="ri-information-line me-1"></i>
+                            Aktifkan notifikasi untuk jenis transaksi yang ingin dikirim otomatis ke Telegram.
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="d-flex justify-content-between align-items-center border rounded p-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar avatar-sm me-2">
+                                            <span class="avatar-initial rounded bg-label-primary"><i class="ri-key-line ri-16px"></i></span>
+                                        </div>
+                                        <span class="fw-medium">Aktivasi Lisensi</span>
+                                    </div>
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" name="notif_aktivasi"
+                                               {% if pengaturan.notif_aktivasi %}checked{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="d-flex justify-content-between align-items-center border rounded p-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar avatar-sm me-2">
+                                            <span class="avatar-initial rounded bg-label-danger"><i class="ri-alarm-warning-line ri-16px"></i></span>
+                                        </div>
+                                        <span class="fw-medium">Lisensi Kadaluarsa</span>
+                                    </div>
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" name="notif_kadaluarsa"
+                                               {% if pengaturan.notif_kadaluarsa %}checked{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="d-flex justify-content-between align-items-center border rounded p-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar avatar-sm me-2">
+                                            <span class="avatar-initial rounded bg-label-success"><i class="ri-shopping-cart-line ri-16px"></i></span>
+                                        </div>
+                                        <span class="fw-medium">Pembelian Lisensi</span>
+                                    </div>
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" name="notif_pembelian"
+                                               {% if pengaturan.notif_pembelian %}checked{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="d-flex justify-content-between align-items-center border rounded p-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar avatar-sm me-2">
+                                            <span class="avatar-initial rounded bg-label-warning"><i class="ri-shield-keyhole-line ri-16px"></i></span>
+                                        </div>
+                                        <span class="fw-medium">Lisensi Suspended</span>
+                                    </div>
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" name="notif_suspend"
+                                               {% if pengaturan.notif_suspend %}checked{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tombol Simpan -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <button type="submit" class="btn btn-primary me-2" id="btnSimpan">
+                            <i class="ri-save-line me-1"></i>Simpan Pengaturan
+                        </button>
+                        <button type="button" class="btn btn-label-secondary" onclick="testKirim()" id="testBtn">
+                            <i class="ri-send-plane-line me-1"></i>Test Kirim
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Info (Kanan) -->
+            <div class="col-lg-4">
+                <!-- Statistik -->
+                <div class="card mb-4">
+                    <h5 class="card-header">Statistik Pengiriman</h5>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar avatar-sm me-2">
+                                    <span class="avatar-initial rounded bg-label-success"><i class="ri-check-line ri-16px"></i></span>
+                                </div>
+                                <span>Terkirim</span>
+                            </div>
+                            <span class="badge bg-label-success">{{ total_terkirim }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar avatar-sm me-2">
+                                    <span class="avatar-initial rounded bg-label-danger"><i class="ri-close-line ri-16px"></i></span>
+                                </div>
+                                <span>Gagal</span>
+                            </div>
+                            <span class="badge bg-label-danger">{{ total_gagal }}</span>
+                        </div>
+                        <hr>
+                        <a href="{% url 'automation:log_notifikasi' %}" class="btn btn-outline-primary btn-sm w-100">
+                            <i class="ri-file-list-3-line me-1"></i>Lihat Semua Log
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Panduan -->
+                <div class="card mb-4">
+                    <h5 class="card-header">Panduan Setup</h5>
+                    <div class="card-body">
+                        <ol class="mb-0" style="padding-left: 1.2rem;">
+                            <li class="mb-2">Buka <a href="https://t.me/BotFather" target="_blank">@BotFather</a> di Telegram</li>
+                            <li class="mb-2">Kirim <code>/newbot</code> untuk membuat bot baru</li>
+                            <li class="mb-2">Copy <strong>Bot Token</strong> yang diberikan</li>
+                            <li class="mb-2">Tambahkan bot ke grup atau kirim pesan ke bot</li>
+                            <li class="mb-2">Dapatkan <strong>Chat ID</strong> dari <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a></li>
+                            <li class="mb-2">Paste Token & Chat ID di form ini</li>
+                            <li>Klik <strong>Test Kirim</strong> untuk verifikasi</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Log Terbaru -->
+                {% if log_terbaru %}
+                <div class="card">
+                    <h5 class="card-header">Log Terbaru</h5>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            {% for log in log_terbaru %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="text-muted d-block">{{ log.dikirim_pada|date:"d/m/Y H:i" }}</small>
+                                    <span class="fw-medium">{{ log.nomor_referensi }}</span>
+                                </div>
+                                {% if log.status == 'sukses' %}
+                                <span class="badge bg-label-success">Sukses</span>
+                                {% else %}
+                                <span class="badge bg-label-danger">Gagal</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+
+    <!-- Alert Response -->
+    <div id="testResult" class="alert" style="display: none;"></div>
+</div>
+{% endblock content %}
+
+{% block page_js %}
+<script>
+function testKirim() {
+    const btn = document.getElementById('testBtn');
+    const resultDiv = document.getElementById('testResult');
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ri-loader-4-line ri-spin me-1"></i>Mengirim...';
+    resultDiv.style.display = 'none';
+
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    fetch('{% url "automation:test_kirim_telegram" %}', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrftoken},
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ri-send-plane-line me-1"></i>Test Kirim';
+
+        resultDiv.className = 'alert alert-dismissible fade show ' + (data.success ? 'alert-success' : 'alert-danger');
+        resultDiv.innerHTML = '<i class="ri-' + (data.success ? 'checkbox-circle' : 'error-warning') + '-line me-2"></i>' + data.message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        resultDiv.style.display = 'block';
+
+        if (data.success) {
+            setTimeout(() => { resultDiv.style.display = 'none'; }, 5000);
+        }
+    })
+    .catch(error => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ri-send-plane-line me-1"></i>Test Kirim';
+        resultDiv.className = 'alert alert-danger alert-dismissible fade show';
+        resultDiv.innerHTML = '<i class="ri-error-warning-line me-2"></i>Error: ' + error.message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        resultDiv.style.display = 'block';
+    });
+}
+
+// Toggle aktif label
+document.getElementById('aktif').addEventListener('change', function() {
+    const label = this.closest('.form-check').querySelector('.badge');
+    if (this.checked) {
+        label.className = 'badge bg-label-success';
+        label.textContent = 'Aktif';
+    } else {
+        label.className = 'badge bg-label-secondary';
+        label.textContent = 'Nonaktif';
+    }
+});
+
+// Clear Chat ID button
+document.getElementById('btnClearChatId').addEventListener('click', function() {
+    const chatIdInput = document.getElementById('chat_id');
+    chatIdInput.value = '';
+    chatIdInput.focus();
+});
+
+// Form submit - visual feedback
+document.getElementById('telegramForm').addEventListener('submit', function(e) {
+    const btnSimpan = document.getElementById('btnSimpan');
+    btnSimpan.disabled = true;
+    btnSimpan.innerHTML = '<i class="ri-loader-4-line ri-spin me-1"></i>Menyimpan...';
+});
+
+// Deteksi Chat ID otomatis — tampilkan SEMUA chat terdeteksi
+const btnDeteksi = document.getElementById('btnDeteksiChatId');
+if (btnDeteksi) {
+    btnDeteksi.addEventListener('click', function() {
+        const btn = this;
+        const resultDiv = document.getElementById('testResult');
+        const chatIdInput = document.getElementById('chat_id');
+        const detectedList = document.getElementById('detectedChatsList');
+        const chatItemsContainer = document.getElementById('chatItemsContainer');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ri-loader-4-line ri-spin me-1"></i>Mendeteksi...';
+        detectedList.style.display = 'none';
+        chatItemsContainer.innerHTML = '';
+
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch('{% url "automation:deteksi_chat_id" %}', {
+            method: 'POST',
+            headers: {'X-CSRFToken': csrftoken},
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ri-search-eye-line me-1"></i>Deteksi';
+
+            if (data.success && data.all_chats && data.all_chats.length > 0) {
+                // Tampilkan SEMUA chat yang terdeteksi sebagai pilihan
+                data.all_chats.forEach(function(chat) {
+                    var icon = 'ri-user-line';
+                    var badgeClass = 'bg-label-primary';
+                    var typeLabel = 'Personal';
+                    if (chat.type === 'group' || chat.type === 'supergroup') {
+                        icon = 'ri-group-line';
+                        badgeClass = 'bg-label-success';
+                        typeLabel = 'Grup';
+                    } else if (chat.type === 'channel') {
+                        icon = 'ri-megaphone-line';
+                        badgeClass = 'bg-label-info';
+                        typeLabel = 'Channel';
+                    }
+
+                    var isActive = chatIdInput.value === chat.chat_id;
+                    var activeClass = isActive ? 'border-primary bg-light' : '';
+                    var activeIcon = isActive ? '<i class="ri-check-line text-success ms-auto"></i>' : '<i class="ri-arrow-left-line text-muted ms-auto" title="Klik untuk gunakan"></i>';
+
+                    var item = document.createElement('div');
+                    item.className = 'd-flex align-items-center p-2 mb-1 rounded border cursor-pointer ' + activeClass;
+                    item.style.cursor = 'pointer';
+                    item.style.transition = 'all 0.2s';
+                    item.innerHTML = '<div class="avatar avatar-xs me-2"><span class="avatar-initial rounded ' + badgeClass + '"><i class="' + icon + '"></i></span></div>' +
+                        '<div class="flex-grow-1">' +
+                            '<div class="fw-medium" style="font-size:0.85rem">' + chat.title + '</div>' +
+                            '<small class="text-muted">ID: <code>' + chat.chat_id + '</code> &middot; <span class="badge ' + badgeClass + ' badge-sm">' + typeLabel + '</span></small>' +
+                        '</div>' + activeIcon;
+
+                    item.addEventListener('click', function() {
+                        chatIdInput.value = chat.chat_id;
+                        // Update visual: tandai yang dipilih
+                        chatItemsContainer.querySelectorAll('.border').forEach(function(el) {
+                            el.classList.remove('border-primary', 'bg-light');
+                            var lastIcon = el.querySelector('.ms-auto');
+                            if (lastIcon) lastIcon.className = 'ri-arrow-left-line text-muted ms-auto';
+                        });
+                        item.classList.add('border-primary', 'bg-light');
+                        var selectedIcon = item.querySelector('.ms-auto');
+                        if (selectedIcon) selectedIcon.className = 'ri-check-line text-success ms-auto';
+
+                        // Tampilkan pesan konfirmasi
+                        resultDiv.className = 'alert alert-success alert-dismissible fade show';
+                        resultDiv.innerHTML = '<i class="ri-checkbox-circle-line me-2"></i>Chat ID <strong>' + chat.chat_id + '</strong> (' + chat.title + ') dipilih. Klik <strong>Simpan Pengaturan</strong> untuk menyimpan.' +
+                            '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                        resultDiv.style.display = 'block';
+                    });
+
+                    item.addEventListener('mouseenter', function() {
+                        if (!this.classList.contains('border-primary')) this.classList.add('bg-light');
+                    });
+                    item.addEventListener('mouseleave', function() {
+                        if (!this.classList.contains('border-primary')) this.classList.remove('bg-light');
+                    });
+
+                    chatItemsContainer.appendChild(item);
+                });
+
+                detectedList.style.display = 'block';
+
+                resultDiv.className = 'alert alert-info alert-dismissible fade show';
+                resultDiv.innerHTML = '<i class="ri-information-line me-2"></i>Ditemukan <strong>' + data.all_chats.length + ' chat</strong>. Pilih salah satu dari daftar di bawah field Chat ID, lalu klik <strong>Simpan Pengaturan</strong>.' +
+                    '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                resultDiv.style.display = 'block';
+            } else {
+                resultDiv.className = 'alert alert-dismissible fade show ' + (data.success ? 'alert-success' : 'alert-warning');
+                resultDiv.innerHTML = '<i class="ri-' + (data.success ? 'checkbox-circle' : 'information') + '-line me-2"></i>' + data.message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                resultDiv.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ri-search-eye-line me-1"></i>Deteksi';
+            resultDiv.className = 'alert alert-danger alert-dismissible fade show';
+            resultDiv.innerHTML = '<i class="ri-error-warning-line me-2"></i>Error: ' + error.message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+            resultDiv.style.display = 'block';
+        });
+    });
+}
+</script>
+{% endblock page_js %}

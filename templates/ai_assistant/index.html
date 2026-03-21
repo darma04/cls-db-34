@@ -1,0 +1,442 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   AI ASSISTANT - Halaman CRUD Konfigurasi AI Chat Assistant
+   Modul terpisah: pilih provider (Gemini/ChatGPT), API key, atur model.
+==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block title %}AI Assistant{% endblock title %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="py-3 mb-4">
+        <span class="text-muted fw-light">AI /</span> Pengaturan AI Assistant
+    </h4>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <!-- Kolom Kiri: Form Pengaturan -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5 class="mb-0">
+                        <i class="ri-robot-2-line me-2"></i>Konfigurasi AI Assistant
+                    </h5>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="aktifSwitch"
+                            name="aktif_preview" {% if config.aktif %}checked{% endif %}
+                            style="width: 3em; height: 1.5em;">
+                        <label class="form-check-label fw-bold ms-2" for="aktifSwitch" id="statusLabel">
+                            {% if config.aktif %}Aktif{% else %}Nonaktif{% endif %}
+                        </label>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="aiSettingsForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="aktif" id="aktifHidden" value="{% if config.aktif %}on{% endif %}">
+
+                        <!-- Nama AI -->
+                        <div class="mb-3">
+                            <label class="form-label" for="ai_name">
+                                <i class="ri-user-star-line me-1"></i>Nama AI
+                            </label>
+                            <input type="text" class="form-control" id="ai_name" name="ai_name"
+                                value="{{ config.ai_name|default:'AI Assistant' }}" placeholder="AI Assistant">
+                            <small class="text-muted">Nama yang ditampilkan di header chat AI</small>
+                        </div>
+
+                        <!-- Provider -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="provider">
+                                    <i class="ri-cloud-line me-1"></i>Provider AI
+                                </label>
+                                <select class="form-select" id="provider" name="provider">
+                                    {% for value, label in provider_choices %}
+                                    <option value="{{ value }}" {% if config.provider == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="model_name">
+                                    <i class="ri-cpu-line me-1"></i>Model AI
+                                </label>
+                                <input type="text" class="form-control" id="model_name" name="model_name"
+                                    value="{{ config.model_name }}" placeholder="gemini-2.0-flash">
+                                <small class="text-muted" id="modelHint">
+                                    Groq: llama-3.3-70b-versatile | Gemini: gemini-2.0-flash | ChatGPT: gpt-4o-mini
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- API Key -->
+                        <div class="mb-3">
+                            <label class="form-label" for="api_key">
+                                <i class="ri-key-2-line me-1"></i>API Key
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="api_key" name="api_key"
+                                    value="{{ config.api_key }}" placeholder="Masukkan API Key...">
+                                <button class="btn btn-outline-secondary" type="button" id="toggleApiKey">
+                                    <i class="ri-eye-line"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted" id="apiKeyHint">
+                                Groq: <a href="https://console.groq.com/keys" target="_blank">Groq Console</a> |
+                                Google: <a href="https://aistudio.google.com/apikeys" target="_blank">Google AI Studio</a> |
+                                OpenAI: <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a>
+                            </small>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Advanced Settings -->
+                        <h6 class="mb-3"><i class="ri-settings-4-line me-1"></i>Pengaturan Lanjutan</h6>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="max_tokens">Max Tokens</label>
+                                <input type="number" class="form-control" id="max_tokens" name="max_tokens"
+                                    value="{{ config.max_tokens }}" min="100" max="4096">
+                                <small class="text-muted">Batas panjang respons AI (100–4096)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="temperature">
+                                    Temperature: <span id="tempValue">{{ config.temperature }}</span>
+                                </label>
+                                <input type="range" class="form-range" id="temperature" name="temperature"
+                                    value="{{ config.temperature }}" min="0" max="1" step="0.1">
+                                <small class="text-muted">0 = Fokus & konsisten | 1 = Kreatif & variatif</small>
+                            </div>
+                        </div>
+
+                        <!-- System Prompt -->
+                        <div class="mb-3">
+                            <label class="form-label" for="system_prompt">
+                                <i class="ri-chat-settings-line me-1"></i>System Prompt Tambahan
+                                <small class="text-muted">(opsional)</small>
+                            </label>
+                            <textarea class="form-control" id="system_prompt" name="system_prompt"
+                                rows="3" placeholder="Instruksi tambahan untuk AI...">{{ config.system_prompt }}</textarea>
+                            <small class="text-muted">Instruksi khusus yang ditambahkan ke prompt bawaan sistem</small>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="ri-save-line me-1"></i>Simpan Pengaturan
+                            </button>
+                            <a href="{% url 'dashboard:index' %}" class="btn btn-outline-secondary">Kembali</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kolom Kanan: Info & Panduan -->
+        <div class="col-lg-4">
+            <!-- Status Card -->
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <span class="badge rounded-pill {% if config.aktif and config.api_key %}bg-success{% elif config.aktif %}bg-warning{% else %}bg-secondary{% endif %}"
+                              style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                            {% if config.aktif and config.api_key %}
+                                <i class="ri-check-line me-1"></i>AI Aktif & Terhubung
+                            {% elif config.aktif %}
+                                <i class="ri-alert-line me-1"></i>API Key Belum Diisi
+                            {% else %}
+                                <i class="ri-close-line me-1"></i>AI Nonaktif
+                            {% endif %}
+                        </span>
+                    </div>
+                    <p class="text-muted mb-0">
+                        Provider: <strong>{{ config.get_provider_display }}</strong><br>
+                        Model: <strong>{{ config.model_name }}</strong>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Panduan Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="ri-question-line me-1"></i>Panduan</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="text-warning"><i class="ri-flashlight-line me-1"></i>Groq <span class="badge bg-success" style="font-size:0.65rem;">GRATIS</span></h6>
+                        <ol class="ps-3 mb-0" style="font-size: 0.85rem;">
+                            <li>Buka <a href="https://console.groq.com/keys" target="_blank">Groq Console</a></li>
+                            <li>Daftar (gratis, tanpa kartu)</li>
+                            <li>Klik "Create API Key"</li>
+                            <li>Model: <code>llama-3.3-70b-versatile</code></li>
+                            <li>Limit: <strong>14.400 req/hari</strong></li>
+                        </ol>
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <h6 class="text-primary"><i class="ri-google-line me-1"></i>Google Gemini</h6>
+                        <ol class="ps-3 mb-0" style="font-size: 0.85rem;">
+                            <li>Buka <a href="https://aistudio.google.com/apikeys" target="_blank">Google AI Studio</a></li>
+                            <li>Klik "Create API Key"</li>
+                            <li>Salin API Key ke sini</li>
+                            <li>Model: <code>gemini-2.0-flash</code></li>
+                        </ol>
+                    </div>
+                    <hr>
+                    <div>
+                        <h6 class="text-success"><i class="ri-openai-line me-1"></i>OpenAI ChatGPT</h6>
+                        <ol class="ps-3 mb-0" style="font-size: 0.85rem;">
+                            <li>Buka <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></li>
+                            <li>Buat API Key baru</li>
+                            <li>Salin API Key ke sini</li>
+                            <li>Model: <code>gpt-4o-mini</code></li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fitur Unggulan AI -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="ri-sparkling-2-line me-1"></i>Fitur Unggulan AI</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <div class="d-flex align-items-center p-2 rounded" style="background:rgba(102,108,255,0.08);">
+                                <i class="ri-bar-chart-box-line text-primary me-2" style="font-size:1.2rem;"></i>
+                                <div>
+                                    <strong style="font-size:0.8rem;">Business Intelligence</strong>
+                                    <div class="text-muted" style="font-size:0.7rem;">Analisa okupansi, pendapatan sewa, biaya, keuntungan</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center p-2 rounded" style="background:rgba(40,199,111,0.08);">
+                                <i class="ri-group-line text-success me-2" style="font-size:1.2rem;"></i>
+                                <div>
+                                    <strong style="font-size:0.8rem;">Analisa Klien</strong>
+                                    <div class="text-muted" style="font-size:0.7rem;">Klien aktif, lisensi segera kadaluarsa, suspend list</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center p-2 rounded" style="background:rgba(255,159,67,0.08);">
+                                <i class="ri-funds-line text-warning me-2" style="font-size:1.2rem;"></i>
+                                <div>
+                                    <strong style="font-size:0.8rem;">Analisa Keuangan</strong>
+                                    <div class="text-muted" style="font-size:0.7rem;">Pendapatan vs biaya, profit margin, tren keuangan</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center p-2 rounded" style="background:rgba(234,84,85,0.08);">
+                                <i class="ri-shield-keyhole-line text-danger me-2" style="font-size:1.2rem;"></i>
+                                <div>
+                                    <strong style="font-size:0.8rem;">Deteksi Risiko</strong>
+                                    <div class="text-muted" style="font-size:0.7rem;">Penurunan pembelian, klien tidak aktif, lisensi habis</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center p-2 rounded" style="background:rgba(0,207,232,0.08);">
+                                <i class="ri-home-heart-line text-info me-2" style="font-size:1.2rem;"></i>
+                                <div>
+                                    <strong style="font-size:0.8rem;">Manajemen Lisensi</strong>
+                                    <div class="text-muted" style="font-size:0.7rem;">Data produk, aktivasi lisensi, status penggunaan</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center p-2 rounded" style="background:rgba(168,85,247,0.08);">
+                                <i class="ri-megaphone-line me-2" style="font-size:1.2rem;color:#a855f7;"></i>
+                                <div>
+                                    <strong style="font-size:0.8rem;">Marketing Generator</strong>
+                                    <div class="text-muted" style="font-size:0.7rem;">Campaign plan, strategi promosi, content calendar</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center p-2 rounded" style="background:rgba(236,72,153,0.08);">
+                                <i class="ri-calendar-todo-line me-2" style="font-size:1.2rem;color:#ec4899;"></i>
+                                <div>
+                                    <strong style="font-size:0.8rem;">Campaign Planner</strong>
+                                    <div class="text-muted" style="font-size:0.7rem;">Content calendar, budget allocation, A/B testing</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center p-2 rounded" style="background:rgba(20,184,166,0.08);">
+                                <i class="ri-road-map-line me-2" style="font-size:1.2rem;color:#14b8a6;"></i>
+                                <div>
+                                    <strong style="font-size:0.8rem;">90 Days Business Plan</strong>
+                                    <div class="text-muted" style="font-size:0.7rem;">Roadmap 3 bulan, milestone, target revenue</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center p-2 rounded" style="background:rgba(245,158,11,0.08);">
+                                <i class="ri-building-2-line me-2" style="font-size:1.2rem;color:#f59e0b;"></i>
+                                <div>
+                                    <strong style="font-size:0.8rem;">Multi-Branch Analyzer</strong>
+                                    <div class="text-muted" style="font-size:0.7rem;">Bandingkan performa cabang, ranking, rekomendasi</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center p-2 rounded" style="background:rgba(99,102,241,0.08);">
+                                <i class="ri-instagram-line me-2" style="font-size:1.2rem;color:#6366f1;"></i>
+                                <div>
+                                    <strong style="font-size:0.8rem;">Content Generator</strong>
+                                    <div class="text-muted" style="font-size:0.7rem;">Caption IG, Script TikTok, Deskripsi Shopee, WA Blast</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center p-2 rounded" style="background:rgba(102,108,255,0.08);">
+                                <i class="ri-time-line text-primary me-2" style="font-size:1.2rem;"></i>
+                                <div>
+                                    <strong style="font-size:0.8rem;">Konteks Waktu Cerdas</strong>
+                                    <div class="text-muted" style="font-size:0.7rem;">Hari ini, minggu ini, bulan lalu, 3 bulan terakhir</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center p-2 rounded" style="background:rgba(40,199,111,0.08);">
+                                <i class="ri-links-line text-success me-2" style="font-size:1.2rem;"></i>
+                                <div>
+                                    <strong style="font-size:0.8rem;">Quick Action Links</strong>
+                                    <div class="text-muted" style="font-size:0.7rem;">Link navigasi langsung ke halaman terkait</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center p-2 rounded" style="background:rgba(255,159,67,0.08);">
+                                <i class="ri-calendar-schedule-line text-warning me-2" style="font-size:1.2rem;"></i>
+                                <div>
+                                    <strong style="font-size:0.8rem;">Laporan Terjadwal</strong>
+                                    <div class="text-muted" style="font-size:0.7rem;">Laporan otomatis mingguan setiap Senin pagi</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center p-2 rounded" style="background:rgba(234,84,85,0.08);">
+                                <i class="ri-compass-3-line text-danger me-2" style="font-size:1.2rem;"></i>
+                                <div>
+                                    <strong style="font-size:0.8rem;">SWOT & Executive Summary</strong>
+                                    <div class="text-muted" style="font-size:0.7rem;">Analisa strategi bisnis, forecasting, risiko</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center p-2 rounded" style="background:rgba(0,207,232,0.08);">
+                                <i class="ri-dashboard-3-line text-info me-2" style="font-size:1.2rem;"></i>
+                                <div>
+                                    <strong style="font-size:0.8rem;">AI Dashboard Analytics</strong>
+                                    <div class="text-muted" style="font-size:0.7rem;">Skor kesehatan bisnis, prediksi revenue, anomali</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Keamanan Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="ri-shield-check-line me-1"></i>Keamanan Data</h6>
+                </div>
+                <div class="card-body" style="font-size: 0.85rem;">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2"><i class="ri-check-line text-success me-1"></i>AI hanya menerima <strong>ringkasan angka</strong></li>
+                        <li class="mb-2"><i class="ri-check-line text-success me-1"></i>Tidak ada data pribadi klien yang dikirim</li>
+                        <li class="mb-2"><i class="ri-check-line text-success me-1"></i>Tidak ada SQL langsung dari AI</li>
+                        <li class="mb-2"><i class="ri-check-line text-success me-1"></i>Semua query via Django ORM</li>
+                        <li><i class="ri-check-line text-success me-1"></i>API Key tersimpan aman di database</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block page_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle API Key visibility
+    const toggleBtn = document.getElementById('toggleApiKey');
+    const apiKeyInput = document.getElementById('api_key');
+    if (toggleBtn && apiKeyInput) {
+        toggleBtn.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            if (apiKeyInput.type === 'password') {
+                apiKeyInput.type = 'text';
+                icon.className = 'ri-eye-off-line';
+            } else {
+                apiKeyInput.type = 'password';
+                icon.className = 'ri-eye-line';
+            }
+        });
+    }
+
+    // Temperature slider
+    const tempSlider = document.getElementById('temperature');
+    const tempValue = document.getElementById('tempValue');
+    if (tempSlider && tempValue) {
+        tempSlider.addEventListener('input', function() {
+            tempValue.textContent = this.value;
+        });
+    }
+
+    // Aktif switch sync
+    const aktifSwitch = document.getElementById('aktifSwitch');
+    const aktifHidden = document.getElementById('aktifHidden');
+    const statusLabel = document.getElementById('statusLabel');
+    if (aktifSwitch) {
+        aktifSwitch.addEventListener('change', function() {
+            aktifHidden.value = this.checked ? 'on' : '';
+            statusLabel.textContent = this.checked ? 'Aktif' : 'Nonaktif';
+        });
+    }
+
+    // Provider change — update model hint
+    const providerSelect = document.getElementById('provider');
+    const modelInput = document.getElementById('model_name');
+    const defaults = {
+        'groq': 'llama-3.3-70b-versatile',
+        'gemini': 'gemini-2.0-flash',
+        'openai': 'gpt-4o-mini'
+    };
+    if (providerSelect) {
+        providerSelect.addEventListener('change', function() {
+            const defaultModel = defaults[this.value] || '';
+            modelInput.placeholder = defaultModel;
+            // Auto-switch model jika model saat ini milik provider lain
+            const currentVal = modelInput.value;
+            const isOtherProvider = (
+                (this.value === 'groq' && !currentVal.startsWith('llama') && !currentVal.startsWith('mixtral') && !currentVal.startsWith('gemma')) ||
+                (this.value === 'gemini' && !currentVal.startsWith('gemini')) ||
+                (this.value === 'openai' && !currentVal.startsWith('gpt'))
+            );
+            if (!currentVal || isOtherProvider) {
+                modelInput.value = defaultModel;
+            }
+        });
+    }
+});
+</script>
+{% endblock page_js %}

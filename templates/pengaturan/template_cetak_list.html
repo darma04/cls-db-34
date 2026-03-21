@@ -1,0 +1,507 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   TEMPLATE CETAK LIST - Daftar Template Cetak
+   Halaman daftar template cetak (invoice, SO, PO, dll).
+   Fitur: edit template, preview.
+   ==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block title %}Template Cetak - Pengaturan{% endblock title %}
+
+{% block vendor_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-bs5/datatables.bootstrap5.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css' %}" />
+{% endblock vendor_css %}
+
+{% block vendor_js %}
+{{ block.super }}
+<script src="{% static 'vendor/libs/datatables-bs5/datatables-bootstrap5.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+{% endblock vendor_js %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">
+                <i class="ri-file-text-line me-2"></i>Template Cetak
+            </h4>
+            <p class="text-muted mb-0">Kelola header, footer, dan tanda tangan untuk dokumen cetak</p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if can_create.pengaturan %}
+            <a href="{% url 'pengaturan:template_cetak_create' %}" class="btn btn-primary">
+                <i class="ri-add-line me-1"></i>Tambah Template
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-sm-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="avatar me-3">
+                            <span class="avatar-initial rounded bg-label-primary"><i class="ri-file-list-3-line ri-24px"></i></span>
+                        </div>
+                        <div>
+                            <h4 class="mb-0">{{ total_template }}</h4>
+                            <small class="text-muted">Total Template</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="avatar me-3">
+                            <span class="avatar-initial rounded bg-label-success"><i class="ri-checkbox-circle-line ri-24px"></i></span>
+                        </div>
+                        <div>
+                            <h4 class="mb-0">{{ total_aktif }}</h4>
+                            <small class="text-muted">Template Aktif</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="avatar me-3">
+                            <span class="avatar-initial rounded bg-label-secondary"><i class="ri-close-circle-line ri-24px"></i></span>
+                        </div>
+                        <div>
+                            <h4 class="mb-0">{{ total_nonaktif }}</h4>
+                            <small class="text-muted">Template Nonaktif</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Cari Template</label>
+                    <input type="text" class="form-control" id="searchTemplate" placeholder="Nama template...">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Jenis Dokumen</label>
+                    <select class="form-select" id="jenisFilter">
+                        <option value="">Semua Jenis</option>
+                        <option value="Sertifikat Lisensi">Sertifikat Lisensi</option>
+                        <option value="Invoice Pembelian">Invoice Pembelian</option>
+                        <option value="Laporan">Laporan</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" id="statusFilter">
+                        <option value="">Semua Status</option>
+                        <option value="Aktif">Aktif</option>
+                        <option value="Nonaktif">Nonaktif</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="button" class="btn btn-primary flex-grow-1" onclick="applyFilters()">
+                        <i class="ri-filter-3-line me-1"></i>Filter
+                    </button>
+                    <button type="button" class="btn btn-label-secondary flex-grow-1" onclick="resetFilters()">
+                        <i class="ri-refresh-line me-1"></i>Reset
+                    </button>
+                </div>
+            </div>
+            <!-- Baris kedua: Pilih Kolom -->
+            <div class="row g-3 mt-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Pilih Kolom</label>
+                    <div class="dropdown">
+                        <button class="btn btn-label-secondary dropdown-toggle waves-effect w-100" type="button"
+                            id="columnFilterDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                            aria-expanded="false">
+                            <i class="ri-layout-column-line me-1"></i>
+                            Pilih Kolom yang Ditampilkan
+                        </button>
+                        <div class="dropdown-menu p-3" aria-labelledby="columnFilterDropdown" style="min-width: 280px;">
+                            <h6 class="dropdown-header px-0 mb-2">Kolom Tabel</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="0" id="col-no" checked onchange="toggleColumns()">
+                                <label class="form-check-label" for="col-no">No</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="1" id="col-nama" checked onchange="toggleColumns()">
+                                <label class="form-check-label" for="col-nama">Nama Template</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="2" id="col-jenis" checked onchange="toggleColumns()">
+                                <label class="form-check-label" for="col-jenis">Jenis Dokumen</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="3" id="col-perusahaan" checked onchange="toggleColumns()">
+                                <label class="form-check-label" for="col-perusahaan">Nama Perusahaan</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="4" id="col-telepon" checked onchange="toggleColumns()">
+                                <label class="form-check-label" for="col-telepon">Telepon</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="5" id="col-status" checked onchange="toggleColumns()">
+                                <label class="form-check-label" for="col-status">Status</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="6" id="col-update" checked onchange="toggleColumns()">
+                                <label class="form-check-label" for="col-update">Terakhir Update</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input column-checkbox" type="checkbox" value="7" id="col-aksi" checked onchange="toggleColumns()">
+                                <label class="form-check-label" for="col-aksi">Aksi</label>
+                            </div>
+                            <div class="dropdown-divider my-2"></div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-primary flex-fill" onclick="selectAllColumns()">
+                                    <i class="ri-checkbox-multiple-line ri-16px"></i> Semua
+                                </button>
+                                <button class="btn btn-sm btn-label-secondary flex-fill" onclick="deselectAllColumns()">
+                                    <i class="ri-checkbox-blank-line ri-16px"></i> Kosongkan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-1">Klik untuk memilih kolom</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table Card -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="ri-table-line me-2"></i>Daftar Template Cetak</h5>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-label-success btn-sm" onclick="exportExcel()">
+                    <i class="ri-file-excel-2-line me-1"></i>Export Excel
+                </button>
+                <button type="button" class="btn btn-label-danger btn-sm" onclick="exportPDF()">
+                    <i class="ri-file-pdf-2-line me-1"></i>Export PDF
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="templateTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th><i class="ri-hashtag me-1"></i>No</th>
+                            <th><i class="ri-file-text-line me-1"></i>Nama Template</th>
+                            <th><i class="ri-folder-line me-1"></i>Jenis Dokumen</th>
+                            <th><i class="ri-building-line me-1"></i>Nama Perusahaan</th>
+                            <th><i class="ri-phone-line me-1"></i>Telepon</th>
+                            <th><i class="ri-toggle-line me-1"></i>Status</th>
+                            <th><i class="ri-calendar-line me-1"></i>Terakhir Update</th>
+                            <th><i class="ri-settings-3-line me-1"></i>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for template in templates %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td><strong>{{ template.nama }}</strong></td>
+                            <td>
+                                <span class="badge 
+                                    {% if template.jenis == 'lisensi' %}bg-label-primary
+                                    {% elif template.jenis == 'invoice' %}bg-label-success
+                                    {% elif template.jenis == 'laporan' %}bg-label-info
+                                    {% else %}bg-label-secondary{% endif %}">
+                                    {{ template.get_jenis_display }}
+                                </span>
+                            </td>
+                            <td>{{ template.header_nama_perusahaan }}</td>
+                            <td>{{ template.header_telepon }}</td>
+                            <td>
+                                {% if template.aktif %}
+                                <span class="badge bg-label-success">Aktif</span>
+                                {% else %}
+                                <span class="badge bg-label-secondary">Nonaktif</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ template.diupdate_pada|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if can_edit.pengaturan %}
+                                <div class="dropdown">
+                                    <button type="button" class="btn btn-sm btn-icon dropdown-toggle hide-arrow"
+                                        data-bs-toggle="dropdown">
+                                        <i class="ri-more-2-line"></i>
+                                    </button>
+                                    <div class="dropdown-menu">
+                                        <a class="dropdown-item" href="{% url 'pengaturan:template_cetak_update' template.pk %}">
+                                            <i class="ri-edit-line me-2"></i>Edit
+                                        </a>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <span class="badge bg-label-secondary">
+                                    <i class="ri-eye-line me-1"></i>View Only
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                Belum ada template cetak. 
+                                {% if can_create.pengaturan %}
+                                <a href="{% url 'pengaturan:template_cetak_create' %}">Tambah template</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-footer-summary">
+                        <tr>
+                            <td colspan="4" class="text-start ps-4 py-3" style="vertical-align: middle;">
+                                <div class="d-flex align-items-center justify-content-start">
+                                    <i class="ri-calculator-line me-2 text-primary" style="font-size: 1.5rem;"></i>
+                                    <div class="text-start">
+                                        <strong class="d-block" style="font-size: 1rem;">RINGKASAN</strong>
+                                        <small class="text-muted" style="font-size: 0.75rem;">{{ total_template }} Template Terdaftar</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3" style="vertical-align: middle;"></td>
+                            <td class="py-3" style="vertical-align: middle;">
+                                <div class="d-flex flex-column align-items-center">
+                                    <span class="badge bg-label-success d-flex align-items-center gap-1 mb-1"
+                                        style="font-size: 0.9rem; padding: 0.5rem 0.75rem; min-width: 80px;">
+                                        <i class="ri-checkbox-circle-line"></i>
+                                        <span>{{ total_aktif }}</span>
+                                    </span>
+                                    <small class="text-muted fw-medium" style="font-size: 0.75rem;">Aktif</small>
+                                </div>
+                            </td>
+                            <td class="py-3" style="vertical-align: middle;">
+                                <div class="d-flex flex-column align-items-center">
+                                    <span class="badge bg-label-secondary d-flex align-items-center gap-1 mb-1"
+                                        style="font-size: 0.9rem; padding: 0.5rem 0.75rem; min-width: 80px;">
+                                        <i class="ri-close-circle-line"></i>
+                                        <span>{{ total_nonaktif }}</span>
+                                    </span>
+                                    <small class="text-muted fw-medium" style="font-size: 0.75rem;">Nonaktif</small>
+                                </div>
+                            </td>
+                            <td class="py-3"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block page_js %}
+<script src="{% static 'js/export_utils.js' %}"></script>
+<script>
+var templateTable;
+
+$(document).ready(function() {
+    templateTable = $('#templateTable').DataTable({
+        responsive: false,
+        ordering: true,
+        order: [[2, 'asc']],
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], ['10', '25', '50', '100', 'Semua']],
+        language: {
+            sEmptyTable: "Tidak ada data yang tersedia pada tabel ini",
+            sProcessing: "Sedang memproses...",
+            sLengthMenu: "Tampilkan _MENU_ data",
+            sZeroRecords: "Tidak ditemukan data yang sesuai",
+            sInfo: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+            sInfoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+            sInfoFiltered: "(disaring dari _MAX_ total data)",
+            sSearch: "Cari:",
+            oPaginate: {
+                sFirst: "Pertama",
+                sPrevious: "Sebelumnya",
+                sNext: "Selanjutnya",
+                sLast: "Terakhir"
+            }
+        },
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>><"table-responsive"rt><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        columnDefs: [
+            { orderable: false, targets: [0, 7] },
+            { searchable: false, targets: [0, 7] }
+        ],
+        initComplete: function() {
+            $('.dataTables_filter input').attr('placeholder', 'Cari template...');
+        }
+    });
+});
+
+function applyFilters() {
+    const search = document.getElementById('searchTemplate').value;
+    const jenis = document.getElementById('jenisFilter').value;
+    const status = document.getElementById('statusFilter').value;
+
+    // Column 1 = Nama, Column 2 = Jenis, Column 5 = Status
+    templateTable.column(1).search(search);
+    templateTable.column(2).search(jenis);
+    templateTable.column(5).search(status);
+    templateTable.draw();
+}
+
+function resetFilters() {
+    document.getElementById('searchTemplate').value = '';
+    document.getElementById('jenisFilter').value = '';
+    document.getElementById('statusFilter').value = '';
+    templateTable.search('').columns().search('').draw();
+}
+
+// Pilih Kolom Functions
+function toggleColumns() {
+    if (!templateTable) return;
+    document.querySelectorAll('.column-checkbox').forEach(function(cb) {
+        const colIdx = parseInt(cb.value);
+        const column = templateTable.column(colIdx);
+        column.visible(cb.checked);
+    });
+}
+
+function selectAllColumns() {
+    document.querySelectorAll('.column-checkbox').forEach(function(cb) {
+        cb.checked = true;
+    });
+    toggleColumns();
+}
+
+function deselectAllColumns() {
+    document.querySelectorAll('.column-checkbox').forEach(function(cb) {
+        cb.checked = false;
+    });
+    toggleColumns();
+}
+
+function exportExcel() {
+    const title = 'Daftar Template Cetak';
+    const headers = ['No', 'Nama Template', 'Jenis Dokumen', 'Nama Perusahaan', 'Telepon', 'Status', 'Terakhir Update'];
+    const rows = [];
+
+    document.querySelectorAll('#templateTable tbody tr').forEach((tr, i) => {
+        const cells = tr.querySelectorAll('td');
+        if (cells.length >= 7) {
+            rows.push([
+                i + 1,
+                cells[1].textContent.trim(),
+                cells[2].textContent.trim(),
+                cells[3].textContent.trim(),
+                cells[4].textContent.trim(),
+                cells[5].textContent.trim(),
+                cells[6].textContent.trim()
+            ]);
+        }
+    });
+
+    // Summary
+    const summaryRows = [
+        ['RINGKASAN', '', '', '', '', '', ''],
+        ['Total Template', '{{ total_template }}', '', '', '', '', ''],
+        ['Aktif', '{{ total_aktif }}', '', '', '', '', ''],
+        ['Nonaktif', '{{ total_nonaktif }}', '', '', '', '', '']
+    ];
+
+    if (typeof ExportUtils !== 'undefined') {
+        ExportUtils.exportTableExcel(title, headers, rows, summaryRows, 'template_cetak');
+    } else {
+        // Fallback: simple HTML table export
+        let html = '<html><head><meta charset="UTF-8"></head><body>';
+        html += '<h2>' + title + '</h2>';
+        html += '<table border="1" cellpadding="5" cellspacing="0">';
+        html += '<tr>' + headers.map(h => '<th style="background:#4472C4;color:#fff;font-weight:bold">' + h + '</th>').join('') + '</tr>';
+        rows.forEach(row => {
+            html += '<tr>' + row.map(c => '<td>' + c + '</td>').join('') + '</tr>';
+        });
+        html += '<tr><td colspan="5" style="text-align:right;font-weight:bold">RINGKASAN:</td><td colspan="2">{{ total_template }} Total | {{ total_aktif }} Aktif | {{ total_nonaktif }} Nonaktif</td></tr>';
+        html += '</table></body></html>';
+
+        const blob = new Blob([html], {type: 'application/vnd.ms-excel'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'template_cetak.xls';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+}
+
+function exportPDF() {
+    const title = 'Daftar Template Cetak';
+    const headers = ['No', 'Nama Template', 'Jenis Dokumen', 'Nama Perusahaan', 'Status'];
+    const rows = [];
+
+    document.querySelectorAll('#templateTable tbody tr').forEach((tr, i) => {
+        const cells = tr.querySelectorAll('td');
+        if (cells.length >= 6) {
+            rows.push([
+                (i + 1).toString(),
+                cells[1].textContent.trim(),
+                cells[2].textContent.trim(),
+                cells[3].textContent.trim(),
+                cells[5].textContent.trim()
+            ]);
+        }
+    });
+
+    // Summary line
+    const summaryText = 'Total: {{ total_template }} template | Aktif: {{ total_aktif }} | Nonaktif: {{ total_nonaktif }}';
+
+    if (typeof ExportUtils !== 'undefined') {
+        ExportUtils.exportTablePDF(title, headers, rows, summaryText, 'template_cetak');
+    } else if (typeof pdfMake !== 'undefined') {
+        const docDefinition = {
+            pageSize: 'A4',
+            pageOrientation: 'portrait',
+            content: [
+                { text: title, style: 'header' },
+                { text: 'Tanggal: ' + new Date().toLocaleDateString('id-ID'), style: 'subheader' },
+                {
+                    table: {
+                        headerRows: 1,
+                        widths: ['auto', '*', 'auto', '*', 'auto'],
+                        body: [
+                            headers.map(h => ({ text: h, style: 'tableHeader' })),
+                            ...rows
+                        ]
+                    },
+                    layout: {
+                        fillColor: function(rowIndex) { return rowIndex === 0 ? '#4472C4' : (rowIndex % 2 === 0 ? '#f2f2f2' : null); }
+                    }
+                },
+                { text: summaryText, style: 'summary', margin: [0, 10, 0, 0] }
+            ],
+            styles: {
+                header: { fontSize: 16, bold: true, margin: [0, 0, 0, 5] },
+                subheader: { fontSize: 10, color: '#666', margin: [0, 0, 0, 10] },
+                tableHeader: { bold: true, color: '#fff', fontSize: 10 },
+                summary: { fontSize: 10, bold: true, color: '#333' }
+            }
+        };
+        pdfMake.createPdf(docDefinition).download('template_cetak.pdf');
+    } else {
+        alert('PDF library tidak tersedia');
+    }
+}
+</script>
+{% endblock page_js %}

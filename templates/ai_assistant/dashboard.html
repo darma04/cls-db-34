@@ -1,0 +1,530 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   AI DASHBOARD - Halaman Analytics AI SIMKOS (Health Score, Prediksi, Anomali)
+==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block title %}AI Dashboard{% endblock title %}
+
+{% block vendor_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/libs/apex-charts/apex-charts.css' %}" />
+{% endblock vendor_css %}
+
+{% block vendor_js %}
+{{ block.super }}
+<script src="{% static 'vendor/libs/apex-charts/apexcharts.js' %}"></script>
+{% endblock vendor_js %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="py-3 mb-4">
+        <span class="text-muted fw-light">AI /</span> Dashboard Analytics
+    </h4>
+
+    {% if dashboard_error %}
+    <div class="alert alert-danger">
+        <i class="ri-error-warning-line me-2"></i>Error memuat data: {{ dashboard_error }}
+    </div>
+    {% endif %}
+
+    <!-- Row 1: Health Score + Key Metrics -->
+    <div class="row mb-4">
+        <!-- Health Score Widget -->
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h6 class="card-title mb-3">
+                        <i class="ri-heart-pulse-line me-1"></i>Skor Kesehatan Bisnis
+                    </h6>
+                    <div class="d-inline-block mb-3 w-100">
+                        <div id="healthScoreDonutChart"></div>
+                    </div>
+                    <div>
+                        <span class="badge rounded-pill px-3 py-2" style="background-color: {{ health_color }}; font-size: 0.85rem;">
+                            {{ health_level }}
+                        </span>
+                    </div>
+                    <div class="mt-3 text-start small text-muted">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span><i class="ri-line-chart-line me-1"></i>Pendapatan Growth</span>
+                            <span class="fw-semibold {% if rev_growth >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ rev_growth }}%
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span><i class="ri-home-heart-line me-1"></i>Avg Transaksi</span>
+                            <span class="fw-semibold">Rp {{ avg_transaksi|floatformat:0 }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span><i class="ri-door-open-line me-1"></i>Lisensi Aktif</span>
+                            <span class="fw-semibold">{{ lisensi_aktif }}/{{ total_lisensi }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span><i class="ri-group-line me-1"></i>Total Klien</span>
+                            <span class="fw-semibold text-primary">
+                                {{ total_klien }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Metrics Cards -->
+        <div class="col-lg-8 col-md-6">
+            <div class="row">
+                <!-- Pendapatan Sewa Bulan Ini -->
+                <div class="col-sm-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar flex-shrink-0">
+                                    <span class="avatar-initial rounded bg-label-primary">
+                                        <i class="ri-money-dollar-circle-line ri-24px"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="d-block text-muted small">Pendapatan Terakhir</span>
+                                    <h5 class="mb-0 fw-bold">Rp {{ rev_now|floatformat:0 }}</h5>
+                                    <small class="{% if rev_growth >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                        <i class="ri-arrow-{% if rev_growth >= 0 %}up{% else %}down{% endif %}-s-line"></i>
+                                        {{ rev_growth }}% dari bulan lalu
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profit -->
+                <div class="col-sm-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar flex-shrink-0">
+                                    <span class="avatar-initial rounded bg-label-success">
+                                        <i class="ri-line-chart-line ri-24px"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="d-block text-muted small">Estimasi Profit</span>
+                                    <h5 class="mb-0 fw-bold {% if profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                        Rp {{ profit|floatformat:0 }}
+                                    </h5>
+                                    <small class="text-muted">Pendapatan - Biaya</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kamar Terisi -->
+                <div class="col-sm-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar flex-shrink-0">
+                                    <span class="avatar-initial rounded bg-label-info">
+                                        <i class="ri-door-open-line ri-24px"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="d-block text-muted small">Total Lisensi</span>
+                                    <h5 class="mb-0 fw-bold">{{ total_lisensi }}</h5>
+                                    <small class="text-muted">Aktif: {{ lisensi_aktif }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Biaya Operasional -->
+                <div class="col-sm-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar flex-shrink-0">
+                                    <span class="avatar-initial rounded bg-label-warning">
+                                        <i class="ri-wallet-line ri-24px"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="d-block text-muted small">Total Klien</span>
+                                    <h5 class="mb-0 fw-bold">{{ total_klien }} Klien</h5>
+                                    <small class="text-muted">Klien Terdaftar</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 2: Revenue Trend Chart + Room Distribution -->
+    <div class="row mb-4">
+        <!-- Revenue Trend Chart -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5 class="card-title mb-0">
+                        <i class="ri-bar-chart-box-line me-2"></i>Tren Pendapatan 6 Bulan
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div style="position:relative; height:280px;">
+                        <canvas id="revenueTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Room Distribution -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="ri-pie-chart-line me-2"></i>Distribusi Lisensi
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="aiRoomDonutChart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 3: Anomaly Detection + AI Usage -->
+    <div class="row">
+        <!-- Anomali -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="ri-alarm-warning-line me-2"></i>Deteksi Anomali & Peringatan
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if anomalies %}
+                    {% for anomaly in anomalies %}
+                    <div class="alert alert-{{ anomaly.level }} d-flex align-items-start gap-3 mb-3" role="alert">
+                        <i class="{{ anomaly.icon }} ri-24px mt-1"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">{{ anomaly.title }}</h6>
+                            <p class="mb-0 small">{{ anomaly.desc }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="alert alert-success d-flex align-items-start gap-3 mb-0">
+                        <i class="ri-check-double-line ri-24px mt-1"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">Tidak Ada Anomali</h6>
+                            <p class="mb-0 small">Semua metrik bisnis lisensi dalam kondisi normal.</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Usage Stats -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="ri-robot-2-line me-2"></i>Statistik AI Chat
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <div class="avatar">
+                            <span class="avatar-initial rounded bg-label-primary">
+                                <i class="ri-chat-3-line ri-24px"></i>
+                            </span>
+                        </div>
+                        <div>
+                            <span class="d-block text-muted small">Total Percakapan</span>
+                            <h5 class="mb-0 fw-bold">{{ total_chats }}</h5>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <div class="avatar">
+                            <span class="avatar-initial rounded bg-label-success">
+                                <i class="ri-thumb-up-line ri-24px"></i>
+                            </span>
+                        </div>
+                        <div>
+                            <span class="d-block text-muted small">Feedback Positif</span>
+                            <h5 class="mb-0 fw-bold text-success">{{ total_feedback_up }}</h5>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <div class="avatar">
+                            <span class="avatar-initial rounded bg-label-danger">
+                                <i class="ri-thumb-down-line ri-24px"></i>
+                            </span>
+                        </div>
+                        <div>
+                            <span class="d-block text-muted small">Feedback Negatif</span>
+                            <h5 class="mb-0 fw-bold text-danger">{{ total_feedback_down }}</h5>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <div class="text-center">
+                        <small class="text-muted">
+                            <i class="ri-information-line me-1"></i>
+                            Data berdasarkan aktivitas user saat ini
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block page_js %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var isDark = document.documentElement.classList.contains('dark-style') ||
+                 document.body.classList.contains('dark-style') ||
+                 window.getComputedStyle(document.body).backgroundColor.includes('rgb(35') ||
+                 window.getComputedStyle(document.body).backgroundColor.includes('rgb(40');
+    var gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
+    var tickColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)';
+    var borderCol = isDark ? 'rgba(255,255,255,0.15)' : '#fff';
+
+    // ═══ HEALTH SCORE GAUGE (ApexCharts Semi-Donut = Organic Sessions Style) ═══
+    try {
+        var healthEl = document.querySelector('#healthScoreDonutChart');
+        if (healthEl) {
+            var score = {{ health_score }};
+            var healthColor = '{{ health_color }}';
+            var labelColor = isDark ? 'rgba(255,255,255,0.6)' : '#6e6b7b';
+            var headingColor = isDark ? '#d0d2d6' : '#5e5873';
+
+            var healthOptions = {
+                series: [score, 100 - score],
+                chart: {
+                    type: 'donut',
+                    height: 280,
+                    fontFamily: '"Inter", sans-serif',
+                    parentHeightOffset: 0
+                },
+                labels: ['Skor', 'Sisa'],
+                colors: [healthColor, isDark ? 'rgba(255,255,255,0.05)' : '#e9ecef'],
+                plotOptions: {
+                    pie: {
+                        endAngle: 130,
+                        startAngle: -130,
+                        customScale: 0.9,
+                        donut: {
+                            size: '83%',
+                            labels: {
+                                show: true,
+                                name: {
+                                    offsetY: 25,
+                                    fontSize: '0.9375rem',
+                                    fontFamily: 'Inter',
+                                    color: labelColor
+                                },
+                                value: {
+                                    offsetY: -15,
+                                    fontWeight: 500,
+                                    fontSize: '1.75rem',
+                                    fontFamily: 'Inter',
+                                    color: headingColor,
+                                    formatter: function(val) { return score; }
+                                },
+                                total: {
+                                    show: true,
+                                    label: '/ 100',
+                                    fontSize: '0.9375rem',
+                                    fontFamily: 'Inter',
+                                    color: labelColor,
+                                    formatter: function(w) { return score; }
+                                }
+                            }
+                        }
+                    }
+                },
+                tooltip: { enabled: false },
+                dataLabels: { enabled: false },
+                stroke: {
+                    width: 3,
+                    lineCap: 'round',
+                    colors: [isDark ? '#283046' : '#fff']
+                },
+                states: {
+                    hover: { filter: { type: 'none' } },
+                    active: { filter: { type: 'none' } }
+                },
+                legend: { show: false },
+                responsive: [{
+                    breakpoint: 480,
+                    options: { chart: { height: 240 } }
+                }]
+            };
+            new ApexCharts(healthEl, healthOptions).render();
+        }
+    } catch(e) { console.warn('Health chart error:', e); }
+
+    // ═══ REVENUE TREND CHART ═══
+    try {
+        var trendEl = document.getElementById('revenueTrendChart');
+        if (trendEl) {
+            var labels = {{ monthly_labels|safe }};
+            var values = {{ monthly_values|safe }};
+
+            new Chart(trendEl.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Pendapatan (Rp)',
+                        data: values,
+                        backgroundColor: 'rgba(102, 108, 255, 0.75)',
+                        borderColor: '#666cff',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        barPercentage: 0.55,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            padding: 10,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(ctx) {
+                                    return 'Rp ' + ctx.parsed.y.toLocaleString('id-ID');
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: tickColor,
+                                callback: function(val) {
+                                    if (val >= 1000000) return 'Rp ' + (val / 1000000).toFixed(1) + 'jt';
+                                    if (val >= 1000) return 'Rp ' + (val / 1000).toFixed(0) + 'rb';
+                                    return 'Rp ' + val;
+                                }
+                            },
+                            grid: { color: gridColor }
+                        },
+                        x: {
+                            ticks: { color: tickColor },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+    } catch(e) { console.warn('Revenue chart error:', e); }
+
+    // ═══ ROOM DISTRIBUTION CHART (ApexCharts Semi-Donut = Status Tagihan Style) ═══
+    try {
+        var roomDonutEl = document.querySelector('#aiRoomDonutChart');
+        if (roomDonutEl) {
+            var lisensiAktif = parseInt("{{ lisensi_aktif|default:0 }}", 10);
+            var lisensiExpired = parseInt("{{ lisensi_expired|default:0 }}", 10);
+            var lisensiSuspended = parseInt("{{ lisensi_suspended|default:0 }}", 10);
+            var totalLisensiValue = lisensiAktif + lisensiExpired + lisensiSuspended;
+            var labelColor = isDark ? 'rgba(255,255,255,0.6)' : '#6e6b7b';
+
+            var headingColor = isDark ? '#d0d2d6' : '#5e5873';
+
+            var roomDonutOptions = {
+                series: totalLisensiValue > 0 ? [lisensiAktif, lisensiExpired, lisensiSuspended] : [1],
+                chart: {
+                    type: 'donut',
+                    height: 355,
+                    fontFamily: '"Inter", sans-serif',
+                    parentHeightOffset: 0
+                },
+                labels: ['Aktif', 'Kadaluarsa', 'Suspended'],
+                colors: ['#28c76f', '#ea5455', '#ff9f43'],
+                plotOptions: {
+                    pie: {
+                        endAngle: 130,
+                        startAngle: -130,
+                        customScale: 0.9,
+                        donut: {
+                            size: '83%',
+                            labels: {
+                                show: true,
+                                name: {
+                                    offsetY: 25,
+                                    fontSize: '0.9375rem',
+                                    fontFamily: 'Inter',
+                                    color: labelColor
+                                },
+                                value: {
+                                    offsetY: -15,
+                                    fontWeight: 500,
+                                    fontSize: '1.75rem',
+                                    fontFamily: 'Inter',
+                                    color: headingColor,
+                                    formatter: function(val) { return val; }
+                                },
+                                total: {
+                                    show: true,
+                                    label: 'Total Lisensi',
+                                    fontSize: '0.9375rem',
+                                    fontFamily: 'Inter',
+                                    color: labelColor,
+                                    formatter: function(w) {
+                                        return w.globals.seriesTotals.reduce(function(a, b) { return a + b; }, 0);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                tooltip: { enabled: false },
+                dataLabels: { enabled: false },
+                stroke: {
+                    width: 3,
+                    lineCap: 'round',
+                    colors: [isDark ? '#283046' : '#fff']
+                },
+                states: {
+                    hover: { filter: { type: 'none' } },
+                    active: { filter: { type: 'none' } }
+                },
+                legend: {
+                    position: 'bottom',
+                    fontFamily: 'Inter',
+                    fontSize: '15px',
+                    markers: { offsetX: -5 },
+                    itemMargin: { horizontal: 24, vertical: 8 },
+                    labels: { colors: headingColor }
+                },
+                responsive: [{
+                    breakpoint: 480,
+                    options: { chart: { height: 240 } }
+                }]
+            };
+            new ApexCharts(roomDonutEl, roomDonutOptions).render();
+        }
+    } catch(e) { console.warn('Room donut chart error:', e); }
+});
+</script>
+{% endblock page_js %}

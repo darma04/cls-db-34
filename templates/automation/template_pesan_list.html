@@ -1,0 +1,102 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   TEMPLATE PESAN LIST - Daftar Template Pesan Notifikasi
+   Halaman daftar template pesan untuk notifikasi.
+   Fitur: tambah, edit, hapus template.
+   ==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block title %}Template Pesan - Automasi{% endblock title %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">
+                <i class="ri-file-text-line me-2"></i>Template Pesan Telegram
+            </h4>
+            <p class="text-muted mb-0">Kelola template pesan notifikasi yang dikirim ke Telegram</p>
+        </div>
+        <a href="{% url 'automation:pengaturan_telegram' %}" class="btn btn-label-secondary">
+            <i class="ri-arrow-left-line me-1"></i>Kembali
+        </a>
+    </div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="row g-4">
+        {% for template in templates %}
+        <div class="col-md-6">
+            <div class="card h-100 d-flex flex-column">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar avatar-sm me-2">
+                            {% if template.jenis == 'aktivasi' %}
+                            <span class="avatar-initial rounded bg-label-primary"><i class="ri-key-line ri-16px"></i></span>
+                            {% elif template.jenis == 'kadaluarsa' %}
+                            <span class="avatar-initial rounded bg-label-danger"><i class="ri-alarm-warning-line ri-16px"></i></span>
+                            {% elif template.jenis == 'pembelian' %}
+                            <span class="avatar-initial rounded bg-label-success"><i class="ri-shopping-cart-line ri-16px"></i></span>
+                            {% elif template.jenis == 'suspend' %}
+                            <span class="avatar-initial rounded bg-label-warning"><i class="ri-shield-keyhole-line ri-16px"></i></span>
+                            {% endif %}
+                        </div>
+                        <h5 class="mb-0">{{ template.get_jenis_display }}</h5>
+                    </div>
+                    {% if template.aktif %}
+                    <span class="badge bg-label-success">Aktif</span>
+                    {% else %}
+                    <span class="badge bg-label-secondary">Nonaktif</span>
+                    {% endif %}
+                </div>
+                <div class="card-body flex-grow-1 d-flex flex-column">
+                    <p class="fw-medium mb-2">{{ template.nama }}</p>
+                    <div class="bg-lighter p-3 rounded mb-3 flex-grow-1" style="min-height: 200px; max-height: 280px; overflow-y: auto;">
+                        <pre class="mb-0" style="white-space: pre-wrap; word-break: break-word; font-size: 0.8125rem;">{{ template.template_pesan }}</pre>
+                    </div>
+                    <small class="text-muted mt-auto">
+                        <i class="ri-time-line me-1"></i>Terakhir diupdate: {{ template.diupdate_pada|date:"d/m/Y H:i" }}
+                    </small>
+                </div>
+                <div class="card-footer d-flex gap-2">
+                    {% if can_edit.automation %}
+                    <a href="{% url 'automation:template_pesan_update' template.pk %}" class="btn btn-primary btn-sm">
+                        <i class="ri-pencil-line me-1"></i>Edit Template
+                    </a>
+                    <form method="post" action="{% url 'automation:template_pesan_reset' template.pk %}"
+                          onsubmit="return confirm('Reset template ke default?')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-label-secondary btn-sm">
+                            <i class="ri-refresh-line me-1"></i>Reset Default
+                        </button>
+                    </form>
+                    {% else %}
+                    <span class="badge bg-label-secondary">
+                        <i class="ri-eye-line me-1"></i>View Only
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="ri-file-text-line ri-3x text-muted mb-3 d-block"></i>
+                    <p class="text-muted mb-0">Belum ada template pesan</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock content %}

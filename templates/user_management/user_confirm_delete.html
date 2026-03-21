@@ -1,0 +1,137 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   USER DELETE - Konfirmasi Hapus User
+   Halaman konfirmasi sebelum menghapus pengguna.
+   ==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block title %}{{ title }} - SIMKOS{% endblock title %}
+
+{% block vendor_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/libs/sweetalert2/sweetalert2.css' %}" />
+{% endblock vendor_css %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="py-3 mb-4">
+        <span class="text-muted fw-light">Manajemen User /</span> Hapus User
+    </h4>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Alert Card -->
+            <div class="card border-danger mb-4">
+                <div class="card-header bg-label-danger d-flex align-items-center">
+                    <i class="ri-alert-line ri-24px text-danger me-2"></i>
+                    <h5 class="mb-0 text-danger">{{ title }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger d-flex align-items-center" role="alert">
+                        <i class="ri-error-warning-line ri-22px me-2"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">Peringatan!</h6>
+                            <span>Tindakan ini akan menghapus user secara permanen dan <strong>tidak dapat dibatalkan</strong>.</span>
+                        </div>
+                    </div>
+
+                    <!-- User Info Card -->
+                    <div class="card bg-lighter mb-4">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar avatar-lg me-3">
+                                    <span class="avatar-initial rounded bg-label-primary">
+                                        <i class="ri-user-line ri-28px"></i>
+                                    </span>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-0">{{ user.username }}</h5>
+                                    <small class="text-muted">{{ user.email|default:"-" }}</small>
+                                </div>
+                            </div>
+                            <hr class="my-3">
+                            <div class="row g-3">
+                                <div class="col-sm-4">
+                                    <small class="text-muted d-block mb-1">Nama Lengkap</small>
+                                    <span>{{ user.get_full_name|default:"-" }}</span>
+                                </div>
+                                <div class="col-sm-4">
+                                    <small class="text-muted d-block mb-1">Role</small>
+                                    <div>
+                                        {% if user.is_superuser %}
+                                        <span class="badge bg-label-danger">Superuser</span>
+                                        {% elif user.is_staff %}
+                                        <span class="badge bg-label-warning">Staff</span>
+                                        {% else %}
+                                        <span class="badge bg-label-info">User</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-sm-4">
+                                    <small class="text-muted d-block mb-1">Status</small>
+                                    <div>
+                                        {% if user.is_active %}
+                                        <span class="badge bg-label-success">Aktif</span>
+                                        {% else %}
+                                        <span class="badge bg-label-secondary">Nonaktif</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="mb-2">Apakah Anda yakin ingin menghapus user ini?</h6>
+                    <p class="text-muted mb-4">
+                        Semua data dan riwayat yang terkait dengan user <strong>{{ user.username }}</strong> akan dihapus secara permanen dari sistem.
+                    </p>
+
+                    <form method="post" id="deleteUserForm">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2 justify-content-end flex-wrap">
+                            <a href="{% url 'user_management:index' %}" class="btn btn-label-secondary">
+                                <i class="ri-close-line me-1"></i>Batal
+                            </a>
+                            <a href="{% url 'user_management:user_detail' user.pk %}" class="btn btn-info">
+                                <i class="ri-eye-line me-1"></i>Lihat Detail
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="ri-delete-bin-line me-1"></i>Ya, Hapus User
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="ri-information-line me-2"></i>Catatan Penting</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li class="mb-2">
+                            <i class="ri-close-circle-line text-danger me-1"></i>
+                            <span>User yang dihapus <strong>tidak dapat dipulihkan kembali</strong></span>
+                        </li>
+                        <li class="mb-2">
+                            <i class="ri-link-unlink-m text-warning me-1"></i>
+                            <span>Semua data transaksi yang terkait akan kehilangan referensi user</span>
+                        </li>
+                        <li class="mb-2">
+                            <i class="ri-database-2-line text-info me-1"></i>
+                            <span>Pastikan untuk membuat backup data jika diperlukan</span>
+                        </li>
+                        <li class="mb-0">
+                            <i class="ri-logout-box-r-line text-secondary me-1"></i>
+                            <span>User yang sedang login akan otomatis logout setelah dihapus</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

@@ -1,0 +1,193 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   TEMPLATE CETAK FORM - Form Edit Template Cetak
+   Formulir untuk mengedit template cetak.
+   Field: header perusahaan, footer, logo, format.
+   ==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block title %}{{ action }} Template Cetak - Pengaturan{% endblock title %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb breadcrumb-style1">
+                    <li class="breadcrumb-item"><a href="{% url 'pengaturan:template_cetak_list' %}">Template Cetak</a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ action }}</li>
+                </ol>
+            </nav>
+            <h4 class="mb-1">{{ action }} Template Cetak</h4>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <!-- Informasi Template -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="card-title">Informasi Template</h5>
+                                <hr>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nama Template <span class="text-danger">*</span></label>
+                                {{ form.nama }}
+                                {% if form.nama.errors %}
+                                <div class="invalid-feedback d-block">{{ form.nama.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Jenis Dokumen <span class="text-danger">*</span></label>
+                                {{ form.jenis }}
+                                {% if form.jenis.errors %}
+                                <div class="invalid-feedback d-block">{{ form.jenis.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Header Perusahaan -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="card-title">Header Perusahaan</h5>
+                                <hr>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nama Perusahaan <span class="text-danger">*</span></label>
+                                {{ form.header_nama_perusahaan }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Alamat</label>
+                                {{ form.header_alamat }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Telepon</label>
+                                {{ form.header_telepon }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Email</label>
+                                {{ form.header_email }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Website</label>
+                                {{ form.header_website }}
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="card-title">Footer</h5>
+                                <hr>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ucapan Terima Kasih</label>
+                                {{ form.footer_ucapan }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Keterangan Footer</label>
+                                {{ form.footer_keterangan }}
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Footer Copyright</label>
+                                {{ form.footer_copyright }}
+                                <small class="text-muted">Contoh: © 2026 PT. Nama Perusahaan</small>
+                            </div>
+                        </div>
+
+                        <!-- Pengaturan Tanda Tangan & Tampilan -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="card-title">Label Tanda Tangan & Tampilan</h5>
+                                <hr>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Label Tanda Tangan Kiri</label>
+                                {{ form.signature_kiri_label }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Label Tanda Tangan Kanan</label>
+                                {{ form.signature_kanan_label }}
+                            </div>
+                        </div>
+
+                        <!-- Pengaturan Tampilan -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="card-title">Pengaturan Tampilan</h5>
+                                <hr>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="form-check form-switch mt-4">
+                                    {{ form.tampilkan_logo }}
+                                    <label class="form-check-label" for="{{ form.tampilkan_logo.id_for_label }}">
+                                        Tampilkan Logo
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="form-check form-switch mt-4">
+                                    {{ form.tampilkan_website }}
+                                    <label class="form-check-label" for="{{ form.tampilkan_website.id_for_label }}">
+                                        Tampilkan Website
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="form-check form-switch mt-4">
+                                    {{ form.aktif }}
+                                    <label class="form-check-label" for="{{ form.aktif.id_for_label }}">
+                                        Template Aktif
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'pengaturan:template_cetak_list' %}" class="btn btn-label-secondary">
+                                <i class="ri-close-line me-1"></i>Batal
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="ri-save-line me-1"></i>Simpan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control,
+    .form-select {
+        border: 1px solid #d9dee3;
+    }
+
+    textarea.form-control {
+        min-height: 80px;
+    }
+</style>
+{% endblock content %}
+
+{% block page_js %}
+<script>
+    // Tambah class form-control ke field form Django
+    document.querySelectorAll('input[type="text"], input[type="email"], textarea, select').forEach(el => {
+        el.classList.add('form-control');
+    });
+
+    document.querySelectorAll('input[type="checkbox"]').forEach(el => {
+        el.classList.add('form-check-input');
+    });
+</script>
+{% endblock page_js %}

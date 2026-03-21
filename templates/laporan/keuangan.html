@@ -1,0 +1,395 @@
+{% extends 'layout/layout_vertical.html' %}
+{% load static humanize %}
+{% block title %}Laporan Keuangan - SIMKOS{% endblock title %}
+{% block vendor_css %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/libs/flatpickr/flatpickr.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/apex-charts/apex-charts.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-bs5/datatables.bootstrap5.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css' %}" />
+{% endblock vendor_css %}
+{% block vendor_js %}{{ block.super }}
+<script src="{% static 'vendor/libs/flatpickr/flatpickr.js' %}"></script>
+<script src="{% static 'vendor/libs/apex-charts/apexcharts.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="{% static 'vendor/libs/datatables-bs5/datatables-bootstrap5.js' %}"></script>
+<script src="{% static 'js/simkos_export.js' %}"></script>
+{% endblock vendor_js %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div><h4 class="mb-1"><i class="ri-file-chart-line me-2"></i>Laporan Keuangan</h4><p class="text-muted mb-0">Ringkasan pemasukan, pengeluaran & laba bersih</p></div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get">
+            <div class="row g-3">
+                <div class="col-md-3"><label class="form-label">Dari Tanggal</label><input type="text" name="start_date" class="form-control flatpickr-input" id="startDate" value="{{ start_date }}" placeholder="Pilih tanggal"></div>
+                <div class="col-md-3"><label class="form-label">Sampai Tanggal</label><input type="text" name="end_date" class="form-control flatpickr-input" id="endDate" value="{{ end_date }}" placeholder="Pilih tanggal"></div>
+                <div class="col-md-3">
+                    <label class="form-label">Tampilkan</label>
+                    <select name="jenis" class="form-select">
+                        <option value="" {% if not jenis_filter %}selected{% endif %}>Semua</option>
+                        <option value="pemasukan" {% if jenis_filter == 'pemasukan' %}selected{% endif %}>Pemasukan Saja</option>
+                        <option value="pengeluaran" {% if jenis_filter == 'pengeluaran' %}selected{% endif %}>Pengeluaran Saja</option>
+                    </select>
+                </div>
+                <div class="col-md-3"></div>
+            </div>
+            <div class="row g-3 mt-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Pilih Kolom</label>
+                    <div class="dropdown">
+                        <button class="btn btn-label-secondary dropdown-toggle waves-effect w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"><i class="ri-layout-column-line me-1"></i>Pilih Kolom yang Ditampilkan</button>
+                        <div class="dropdown-menu p-3" style="min-width: 280px;">
+                            <h6 class="dropdown-header px-0 mb-2">Kolom Pendapatan</h6>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="0" checked onchange="SimkosExport.toggleColumns('#tblPemasukan')"><label class="form-check-label">Tanggal</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="1" checked onchange="SimkosExport.toggleColumns('#tblPemasukan')"><label class="form-check-label">No. Transaksi</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="2" checked onchange="SimkosExport.toggleColumns('#tblPemasukan')"><label class="form-check-label">Klien</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="3" checked onchange="SimkosExport.toggleColumns('#tblPemasukan')"><label class="form-check-label">Status</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="4" checked onchange="SimkosExport.toggleColumns('#tblPemasukan')"><label class="form-check-label">Jumlah</label></div>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-1">Klik untuk memilih kolom</small>
+                </div>
+                <div class="col-md-6"></div>
+                <div class="col-md-3"><div class="d-grid gap-2"><button type="submit" class="btn btn-primary"><i class="ri-filter-3-line me-1"></i>Terapkan Filter</button><a href="{% url 'laporan:keuangan' %}" class="btn btn-label-secondary"><i class="ri-refresh-line me-1"></i>Reset</a></div></div>
+            </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1">Total Pemasukan</p>
+                            <h4 class="mb-0 text-success">Rp {{ total_pemasukan|floatformat:0|intcomma }}</h4>
+                            <small class="text-muted">{{ total_trx_masuk }} transaksi</small>
+                        </div>
+                        <div class="avatar"><span class="avatar-initial rounded bg-label-success"><i class="ri-arrow-up-circle-line ri-24px"></i></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1">Total Pengeluaran</p>
+                            <h4 class="mb-0 text-danger">Rp {{ total_pengeluaran|floatformat:0|intcomma }}</h4>
+                            <small class="text-muted">{{ total_trx_keluar }} transaksi</small>
+                        </div>
+                        <div class="avatar"><span class="avatar-initial rounded bg-label-danger"><i class="ri-arrow-down-circle-line ri-24px"></i></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1">Laba Bersih</p>
+                            <h4 class="mb-0 {% if laba_bersih >= 0 %}text-success{% else %}text-danger{% endif %}">Rp {{ laba_bersih|floatformat:0|intcomma }}</h4>
+                            <small class="{% if laba_bersih >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                <i class="{% if laba_bersih >= 0 %}ri-arrow-up-s-line{% else %}ri-arrow-down-s-line{% endif %}"></i>
+                                {{ margin_persen }}% margin
+                            </small>
+                        </div>
+                        <div class="avatar"><span class="avatar-initial rounded {% if laba_bersih >= 0 %}bg-label-success{% else %}bg-label-danger{% endif %}"><i class="ri-funds-line ri-24px"></i></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1">Total Transaksi</p>
+                            <h4 class="mb-0">{{ total_trx_masuk|add:total_trx_keluar }}</h4>
+                            <small class="text-muted">masuk + keluar</small>
+                        </div>
+                        <div class="avatar"><span class="avatar-initial rounded bg-label-primary"><i class="ri-exchange-line ri-24px"></i></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Pemasukan vs Pengeluaran -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header pb-1">
+                    <h5 class="mb-0"><i class="ri-bar-chart-grouped-line me-2 text-primary"></i>Tren Pendapatan Tahunan</h5>
+                </div>
+                <div class="card-body pt-2">
+                    <div style="position:relative;height:300px"><canvas id="keuanganBarCanvas"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header pb-1">
+                    <h5 class="mb-0"><i class="ri-pie-chart-2-line me-2 text-info"></i>Komposisi</h5>
+                </div>
+                <div class="card-body pt-2 d-flex flex-column justify-content-center">
+                    <div id="keuanganPieChart" style="min-height: 280px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Pemasukan -->
+    {% if jenis_filter != 'pengeluaran' %}
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0"><i class="ri-arrow-up-circle-line me-2 text-success"></i>Rincian Pemasukan (20 Terakhir)</h5>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <a href="{% url 'laporan:pendapatan' %}" class="btn btn-sm btn-label-success rounded-pill">Lihat Semua</a>
+                <button class="btn btn-label-success btn-sm" onclick="exportTableExcel('tblPemasukan','Rincian_Pemasukan',{4:{{ total_pemasukan|floatformat:0|default:0 }}},'RINGKASAN ({{ total_trx_masuk }} Transaksi Pemasukan)','RINCIAN PEMASUKAN')"><i class="ri-file-excel-2-line me-1"></i>Excel</button>
+                <button class="btn btn-label-danger btn-sm" onclick="exportTablePDF('tblPemasukan','RINCIAN PEMASUKAN',{4:{{ total_pemasukan|floatformat:0|default:0 }}},'RINGKASAN ({{ total_trx_masuk }} Transaksi)')"><i class="ri-file-pdf-line me-1"></i>PDF</button>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="tblPemasukan">
+                <thead class="table-light"><tr><th>Tanggal</th><th>No. Transaksi</th><th>Klien</th><th>Status</th><th class="text-end">Jumlah</th></tr></thead>
+                <tbody>
+                    {% for p in pemasukan_list %}
+                    <tr>
+                        <td>{{ p.tanggal|date:"d/m/Y" }}</td>
+                        <td class="fw-medium">{{ p.nomor_transaksi }}</td>
+                        <td>{{ p.klien.name }}</td>
+                        <td><span class="badge bg-label-primary rounded-pill">{{ p.get_status_display }}</span></td>
+                        <td class="text-end fw-bold text-success">Rp {{ p.total_harga|floatformat:0|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-footer-summary">
+                    <tr>
+                        <td colspan="4" class="text-start ps-4 py-3"><div class="d-flex align-items-center"><i class="ri-calculator-line me-2 text-primary" style="font-size:1.2rem;"></i><strong>RINGKASAN</strong><small class="text-muted ms-2">{{ total_trx_masuk }} Transaksi</small></div></td>
+                        <td class="text-end py-3"><span class="badge bg-label-success" style="font-size:0.9rem;padding:0.4rem 0.7rem;">Rp {{ total_pemasukan|floatformat:0|intcomma }}</span></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Detail Pengeluaran (Dihilangkan untuk License Server) -->
+</div>
+{% endblock content %}
+
+{% block page_js %}
+<script>
+$(document).ready(function() {
+    flatpickr('#startDate', { dateFormat: 'Y-m-d' });
+    flatpickr('#endDate', { dateFormat: 'Y-m-d' });
+
+    // Inisialisasi DataTable untuk integrasi dengan SimkosExport
+    if ($('#tblPemasukan').length) {
+        $('#tblPemasukan').DataTable({
+            paging: false,
+            searching: false,
+            info: false,
+            ordering: false,
+            responsive: true
+        });
+    }
+
+    // === Bar Chart: Pemasukan vs Pengeluaran ===
+    var pemasukan = {{ total_pemasukan|floatformat:0|default:"0" }};
+    var pengeluaran = {{ total_pengeluaran|floatformat:0|default:"0" }};
+    var laba = {{ laba_bersih|floatformat:0|default:"0" }};
+
+    if (typeof ApexCharts !== 'undefined') {
+        var isDarkDonut = document.documentElement.classList.contains('dark-style') ||
+                     document.body.classList.contains('dark-style') ||
+                     window.getComputedStyle(document.body).backgroundColor.includes('rgb(35') ||
+                     window.getComputedStyle(document.body).backgroundColor.includes('rgb(40');
+        var cardBgColor = isDarkDonut ? '#283046' : '#fff';
+        var primaryColor = '#7367f0';
+        var successColor = '#28c76f';
+        var dangerColor = '#ea5455';
+        var labelColor = isDarkDonut ? 'rgba(255,255,255,0.6)' : '#6e6b7b';
+        var gridColor = isDarkDonut ? 'rgba(255,255,255,0.1)' : '#ebe9f1';
+
+        // === Bar Chart: Pemasukan vs Pengeluaran (Chart.js - Identik dengan Tren Pendapatan AI Dashboard) ===
+        var isDark = document.documentElement.classList.contains('dark-style') ||
+                     document.body.classList.contains('dark-style') ||
+                     window.getComputedStyle(document.body).backgroundColor.includes('rgb(35') ||
+                     window.getComputedStyle(document.body).backgroundColor.includes('rgb(40');
+        var chartGridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
+        var chartTickColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)';
+
+        var barEl = document.getElementById('keuanganBarCanvas');
+        if (barEl) {
+            new Chart(barEl.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'],
+                    datasets: [{
+                        label: 'Pendapatan (Rp)',
+                        data: {{ revenue_by_month|safe|default:"[0,0,0,0,0,0,0,0,0,0,0,0]" }},
+                        backgroundColor: 'rgba(102, 108, 255, 0.75)',
+                        borderColor: '#666cff',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        barPercentage: 0.55,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            padding: 10,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(ctx) {
+                                    return 'Rp ' + ctx.parsed.y.toLocaleString('id-ID');
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: chartTickColor,
+                                callback: function(val) {
+                                    if (val >= 1000000) return 'Rp ' + (val / 1000000).toFixed(1) + 'Jt';
+                                    if (val >= 1000) return 'Rp ' + (val / 1000).toFixed(0) + 'Rb';
+                                    return 'Rp ' + val;
+                                }
+                            },
+                            grid: { color: chartGridColor }
+                        },
+                        x: {
+                            ticks: { color: chartTickColor },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        var headingColor = isDarkDonut ? '#d0d2d6' : '#5e5873';
+
+        // === Donut Chart: Komposisi (Materialize Style) ===
+        new ApexCharts(document.querySelector("#keuanganPieChart"), {
+            series: [pemasukan, pengeluaran],
+            chart: {
+                type: 'donut',
+                height: 355,
+                fontFamily: '"Inter", sans-serif',
+                parentHeightOffset: 0
+            },
+            labels: ['Pemasukan', 'Pengeluaran'],
+            colors: ['#ff9f43', '#fdb528cc'],
+            plotOptions: {
+                pie: {
+                    endAngle: 130,
+                    startAngle: -130,
+                    customScale: 0.9,
+                    donut: {
+                        size: '83%',
+                        labels: {
+                            show: true,
+                            name: {
+                                offsetY: 25,
+                                fontSize: '0.9375rem',
+                                fontFamily: 'Inter',
+                                color: labelColor
+                            },
+                            value: {
+                                offsetY: -15,
+                                fontWeight: 500,
+                                fontSize: '1.75rem',
+                                fontFamily: 'Inter',
+                                color: headingColor,
+                                formatter: function(val) { var v = parseFloat(val); if (v >= 1000000) return 'Rp ' + (v / 1000000).toFixed(1) + 'Jt'; if (v >= 1000) return 'Rp ' + (v / 1000).toFixed(0) + 'Rb'; return 'Rp ' + v; }
+                            },
+                            total: {
+                                show: true,
+                                label: 'Total',
+                                fontSize: '0.9375rem',
+                                fontFamily: 'Inter',
+                                color: labelColor,
+                                formatter: function(w) { var t = w.globals.seriesTotals.reduce(function(a,b){return a+b;},0); if (t >= 1000000) return 'Rp ' + (t / 1000000).toFixed(1) + 'Jt'; return 'Rp ' + t.toLocaleString('id-ID'); }
+                            }
+                        }
+                    }
+                }
+            },
+            tooltip: { enabled: false },
+            dataLabels: { enabled: false },
+            stroke: {
+                width: 3,
+                lineCap: 'round',
+                colors: [cardBgColor]
+            },
+            states: {
+                hover: { filter: { type: 'none' } },
+                active: { filter: { type: 'none' } }
+            },
+            legend: {
+                position: 'bottom',
+                fontFamily: 'Inter',
+                fontSize: '15px',
+                markers: { offsetX: -5 },
+                itemMargin: { horizontal: 24, vertical: 8 },
+                labels: { colors: headingColor }
+            },
+            responsive: [{ breakpoint: 480, options: { chart: { height: 240 } } }]
+        }).render();
+    }
+});
+
+// === KONFIGURASI EXPORT LAPORAN KEUANGAN ===
+// Tabel Pemasukan: 0=Tanggal, 1=No.Transaksi, 2=Klien, 3=Status, 4=Jumlah
+var EXCEL_INFO = {
+    name: "{{ export_excel_template.header_nama_perusahaan|escapejs|default:'Central License Server' }}",
+    address: "{{ export_excel_template.header_alamat|escapejs|default:'-' }}",
+    phone: "{{ export_excel_template.header_telepon|escapejs|default:'-' }}",
+    email: "{{ export_excel_template.header_email|escapejs|default:'-' }}",
+    copyright: "{{ export_excel_template.footer_copyright|escapejs|default:'\u00a9 2026 Central License Server' }}"
+};
+var PDF_INFO = {
+    name: "{{ export_pdf_template.header_nama_perusahaan|escapejs|default:'Central License Server' }}",
+    address: "{{ export_pdf_template.header_alamat|escapejs|default:'-' }}",
+    phone: "{{ export_pdf_template.header_telepon|escapejs|default:'-' }}",
+    email: "{{ export_pdf_template.header_email|escapejs|default:'-' }}",
+    copyright: "{{ export_pdf_template.footer_copyright|escapejs|default:'\u00a9 2026 Central License Server' }}"
+};
+
+var MONEY_COLS = [4]; // Indeks kolom ke-4 adalah Jumlah/Nominal
+
+function exportTableExcel(tableId, filename, footerData, footerLabel, docTitle) {
+    if (!document.getElementById(tableId)) { alert('Tabel tidak ditemukan!'); return; }
+    SimkosExport.buildExcel('#' + tableId, EXCEL_INFO, footerData, footerLabel, docTitle, filename, MONEY_COLS);
+}
+
+function exportTablePDF(tableId, title, footerData, footerLabel) {
+    if (!document.getElementById(tableId)) { alert('Tabel tidak ditemukan!'); return; }
+    var filename = title.replace(/\s+/g, '_');
+    SimkosExport.buildPDF('#' + tableId, PDF_INFO, footerData, footerLabel, title, filename, MONEY_COLS);
+}
+</script>
+{% endblock page_js %}

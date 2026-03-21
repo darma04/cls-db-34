@@ -1,0 +1,482 @@
+{% extends "layout/layout_vertical.html" %}
+{% comment %}
+==========================================================================
+   ROLE LIST - Daftar Role (CLS)
+   Desain konsisten dengan SIMKOS: perm-card, column filter, delete dialog
+==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block head_title %}{{ title }}{% endblock %}
+
+{% block vendor_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-bs5/datatables.bootstrap5.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/libs/sweetalert2/sweetalert2.css' %}" />
+{% endblock vendor_css %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- Page Header -->
+    <h4 class="mb-1">
+        <i class="ri-shield-user-line me-2"></i>Daftar Roles
+    </h4>
+    <p class="mb-6">Role memberikan akses ke menu dan fitur yang telah ditentukan, sehingga administrator dapat mengakses sesuai dengan kebutuhan user berdasarkan role yang diberikan.</p>
+
+    <!-- Role Cards -->
+    <div class="row g-6">
+        {% for role in roles %}
+        <div class="col-xl-4 col-lg-6 col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <!-- User Count & Avatar Group -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <p class="mb-0 text-muted">Total {{ role.user_count }} user{{ role.user_count|pluralize }}</p>
+                        <ul class="list-unstyled d-flex align-items-center avatar-group mb-0">
+                            {% for user in role.users|slice:":3" %}
+                            <li data-bs-toggle="tooltip" data-bs-placement="top"
+                                title="{{ user.get_full_name|default:user.username }}" class="avatar pull-up">
+                                <span class="avatar-initial rounded-circle bg-label-primary">
+                                    {{ user.username|first|upper }}
+                                </span>
+                            </li>
+                            {% endfor %}
+                            {% if role.user_count > 3 %}
+                            <li class="avatar">
+                                <span class="avatar-initial rounded-circle pull-up bg-lighter text-body"
+                                    data-bs-toggle="tooltip" data-bs-placement="bottom"
+                                    title="{{ role.user_count|add:'-3' }} more">
+                                    +{{ role.user_count|add:'-3' }}
+                                </span>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <!-- Role Name & Actions -->
+                    <div class="d-flex justify-content-between align-items-end">
+                        <div class="role-heading">
+                            <h5 class="mb-1">{{ role.name }}</h5>
+                            <a href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#editRoleModal"
+                                data-role-code="{{ role.code }}" class="role-edit-link">
+                                <small>Edit Role</small>
+                            </a>
+                        </div>
+                        {% if role.code != 'SUPERUSER' %}
+                        <div class="dropdown">
+                            <button type="button" class="btn btn-sm btn-icon dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                                <i class="ri-more-2-line"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end">
+                                <a class="dropdown-item" href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#editRoleModal" data-role-code="{{ role.code }}">
+                                    <i class="ri-edit-line me-2"></i>Edit Role
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item text-danger" href="javascript:void(0);" onclick="confirmDeleteRole('{{ role.code }}', '{{ role.name }}', {{ role.user_count }})">
+                                    <i class="ri-delete-bin-line me-2"></i>Hapus Role
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Permission Summary -->
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            {% if role.code == 'SUPERUSER' %}
+                            <i class="ri-check-double-line text-success"></i> Akses Penuh ke Semua Modul
+                            {% else %}
+                            <i class="ri-shield-check-line text-primary"></i> {{ role.total_permissions }} Permission terkonfigurasi
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Add New Role Card -->
+        <div class="col-xl-4 col-lg-6 col-md-6">
+            <div class="card h-100" style="border: 2px dashed rgba(var(--bs-primary-rgb), 0.2) !important;">
+                <div class="row h-100">
+                    <div class="col-12">
+                        <div class="card-body d-flex flex-column justify-content-center align-items-center h-100">
+                            <a href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#addRoleModal"
+                                class="text-center">
+                                <i class="ri-add-circle-line ri-48px text-primary mb-3 d-block"></i>
+                                <h6 class="mb-1">Tambah Role Baru</h6>
+                                <small class="text-muted">Tambahkan role baru jika belum ada.</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <h5 class="mt-6 mb-1">
+        <i class="ri-team-line me-2"></i>Total User Berdasarkan Roles
+    </h5>
+    <p class="mb-4">Temukan semua akun administrator beserta role yang terkait.</p>
+
+    <!-- Filter Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" id="filterForm">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Cari User (Tabel)</label>
+                    <input type="text" class="form-control" id="searchUser" placeholder="Nama atau Username...">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Filter Role</label>
+                    <select class="form-select" id="roleFilter">
+                        <option value="">Semua Role</option>
+                        {% for code, name in role_choices %}
+                        <option value="{{ name }}">{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Filter Status</label>
+                    <select class="form-select" id="statusFilter">
+                        <option value="">Semua Status</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <!-- Spacer untuk alignment -->
+                </div>
+            </div>
+            <!-- Baris kedua: Pilih Kolom (kiri) dan Tombol Filter (kanan) -->
+            <div class="row g-3 mt-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Pilih Kolom</label>
+                    <div class="dropdown">
+                        <button class="btn btn-label-secondary dropdown-toggle waves-effect w-100" type="button"
+                            id="columnFilterDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                            aria-expanded="false">
+                            <i class="ri-layout-column-line me-1"></i>
+                            Pilih Kolom Yang Ditampilkan
+                        </button>
+                        <div class="dropdown-menu p-3" aria-labelledby="columnFilterDropdown" style="min-width: 280px;">
+                            <h6 class="dropdown-header px-0 mb-2">Kolom Tabel</h6>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="0" id="col-user" checked onchange="toggleColumns()"><label class="form-check-label" for="col-user">User</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="1" id="col-role" checked onchange="toggleColumns()"><label class="form-check-label" for="col-role">Role</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="2" id="col-email" checked onchange="toggleColumns()"><label class="form-check-label" for="col-email">Email</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="3" id="col-status" checked onchange="toggleColumns()"><label class="form-check-label" for="col-status">Status</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input column-checkbox" type="checkbox" value="4" id="col-actions" checked onchange="toggleColumns()"><label class="form-check-label" for="col-actions">Actions</label></div>
+                            <div class="dropdown-divider my-2"></div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-primary flex-fill" onclick="selectAllColumns()"><i class="ri-checkbox-multiple-line ri-16px"></i> Semua</button>
+                                <button type="button" class="btn btn-sm btn-label-secondary flex-fill" onclick="deselectAllColumns()"><i class="ri-checkbox-blank-line ri-16px"></i> Kosongkan</button>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-1">Klik untuk memilih kolom</small>
+                </div>
+                <div class="col-md-6"></div>
+                <div class="col-md-3">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-primary" onclick="applyFilters()">
+                            <i class="ri-filter-3-line me-1"></i>Terapkan Filter
+                        </button>
+                        <button type="button" class="btn btn-label-secondary" onclick="resetFilters()">
+                            <i class="ri-refresh-line me-1"></i>Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-datatable table-responsive">
+            <table class="datatables-users table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar avatar-sm me-3">
+                                    <span class="avatar-initial rounded-circle bg-label-primary">
+                                        {{ user.username|first|upper }}
+                                    </span>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">{{ user.get_full_name|default:user.username }}</h6>
+                                    <small class="text-muted">@{{ user.username }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if user.profile.role %}
+                            <span class="badge {% if user.profile.role == 'SUPERUSER' %}bg-danger{% elif user.profile.role == 'ADMIN' %}bg-primary{% elif user.profile.role == 'USER' %}bg-info{% else %}bg-secondary{% endif %}">
+                                {{ user.profile.get_role_display }}
+                            </span>
+                            {% else %}
+                            <span class="badge bg-label-secondary">No Role</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.email|default:"-" }}</td>
+                        <td>
+                            {% if user.is_active %}
+                            <span class="badge bg-label-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-label-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="dropdown">
+                                <button type="button" class="btn btn-sm btn-icon dropdown-toggle hide-arrow"
+                                    data-bs-toggle="dropdown">
+                                    <i class="ri-more-2-line"></i>
+                                </button>
+                                <div class="dropdown-menu">
+                                    <a class="dropdown-item" href="{% url 'user_management:user_detail' user.pk %}">
+                                        <i class="ri-eye-line me-2"></i>Lihat Detail
+                                    </a>
+                                    <a class="dropdown-item" href="{% url 'user_management:user_edit' user.pk %}">
+                                        <i class="ri-edit-line me-2"></i>Edit User
+                                    </a>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Role Modal -->
+{% include "permission_management/_modals/add_role_modal.html" %}
+
+<!-- Edit Role Modal -->
+{% include "permission_management/_modals/edit_role_modal.html" %}
+
+{% endblock content %}
+
+{% block vendor_js %}
+{{ block.super }}
+<script src="{% static 'vendor/libs/datatables-bs5/datatables-bootstrap5.js' %}"></script>
+<script src="{% static 'vendor/libs/sweetalert2/sweetalert2.js' %}"></script>
+{% endblock vendor_js %}
+
+{% block page_js %}
+<script>
+    var usersTable;
+    $(function () {
+        usersTable = $('.datatables-users').DataTable({
+            order: [[0, 'asc']],
+            pageLength: 25,
+            lengthMenu: [[10, 25, 50, 75, 100, -1], ['10', '25', '50', '75', '100', 'Semua']],
+            responsive: false,
+            autoWidth: false,
+            columnDefs: [
+                { orderable: false, targets: [4] }
+            ],
+            language: {
+                search: '',
+                searchPlaceholder: 'Cari user...',
+                lengthMenu: 'Tampilkan _MENU_ data',
+                info: 'Menampilkan _START_ - _END_ dari _TOTAL_ data',
+                infoEmpty: 'Tidak ada data',
+                infoFiltered: '(difilter dari _MAX_ total data)',
+                zeroRecords: 'Tidak ada data yang cocok',
+                paginate: {
+                    first: 'Pertama',
+                    last: 'Terakhir',
+                    next: '&raquo;',
+                    previous: '&laquo;'
+                }
+            },
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>><"table-responsive"rt><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+        });
+
+        $('#searchUser').on('keyup', function() { usersTable.search(this.value).draw(); });
+        $('#roleFilter').on('change', function() {
+            var val = $(this).val();
+            usersTable.column(1).search(val ? val : '', false, false).draw();
+        });
+        $('#statusFilter').on('change', function() {
+            var val = $(this).val();
+            usersTable.column(3).search(val ? val : '', false, false).draw();
+        });
+    });
+
+    function toggleColumns() {
+        $('.column-checkbox').each(function() {
+            var columnIdx = parseInt($(this).val());
+            var column = usersTable.column(columnIdx);
+            column.visible($(this).is(':checked'));
+        });
+    }
+
+    function selectAllColumns() {
+        $('.column-checkbox').each(function() {
+            $(this).prop('checked', true);
+        });
+        toggleColumns();
+    }
+
+    function deselectAllColumns() {
+        $('.column-checkbox').each(function() {
+            $(this).prop('checked', false);
+        });
+        toggleColumns();
+    }
+
+    function applyFilters() {
+        // Triggers search & filter — already bound to keyup/change
+        usersTable.search($('#searchUser').val()).draw();
+        var roleVal = $('#roleFilter').val();
+        usersTable.column(1).search(roleVal ? roleVal : '', false, false);
+        var statusVal = $('#statusFilter').val();
+        usersTable.column(3).search(statusVal ? statusVal : '', false, false);
+        usersTable.draw();
+    }
+
+    function resetFilters() {
+        $('#searchUser').val('');
+        $('#roleFilter').val('');
+        $('#statusFilter').val('');
+        usersTable.search('').columns().search('').draw();
+        // Reset column visibility
+        $('.column-checkbox').prop('checked', true);
+        toggleColumns();
+    }
+</script>
+<style>
+    .dataTables_wrapper .dataTables_info { padding: 1rem 1.5rem; font-size: 0.875rem; color: #697a8d }
+    .dataTables_wrapper .dataTables_paginate { padding: 1rem 1.5rem }
+    .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter { padding: 0 1.5rem 1rem 1.5rem }
+    .dataTables_wrapper .dataTables_filter input { border: 1px solid #d9dee3; border-radius: 0.375rem; padding: 0.4375rem 0.875rem }
+    .dataTables_wrapper .dataTables_length select { border: 1px solid #d9dee3; border-radius: 0.375rem; padding: 0.4375rem 2rem 0.4375rem 0.875rem }
+    @media (max-width:576px) {
+        .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter { padding: 0.5rem 1rem 0.75rem 1rem; text-align: left !important; width: 100%; }
+        .dataTables_wrapper .dataTables_filter input { width: 100% !important; margin-top: 0.5rem; }
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button { padding: 0.438rem 0.875rem; border-radius: 0.375rem; margin: 0 0.125rem; border: none; background: transparent; color: #697a8d }
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current { background: #696cff !important; color: white !important; border: none }
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.disabled) { background: rgba(105, 108, 255, 0.08) !important; border: none; color: #696cff !important }
+    .dataTables_wrapper .dataTables_paginate .paginate_button.disabled { color: #c7cdd4 !important; cursor: not-allowed }
+    .card-datatable { padding-bottom: 0 }
+    @media (max-width:768px) {
+        .card-datatable { overflow-x: hidden !important; -webkit-overflow-scrolling: touch; max-width: 100% }
+        .datatables-users { min-width: 800px !important; width: 800px !important; table-layout: auto !important }
+        .dataTables_wrapper { overflow-x: hidden !important; max-width: 100% !important }
+        .datatables-users th, .datatables-users td { min-width: 80px; white-space: nowrap; }
+        .datatables-users th:nth-child(1), .datatables-users td:nth-child(1) { min-width: 180px; }
+        .datatables-users th:nth-child(3), .datatables-users td:nth-child(3) { min-width: 180px; }
+        .dataTables_wrapper .dataTables_length { margin-top: 1rem !important; padding-top: 0.75rem !important; }
+        .dataTables_wrapper .dataTables_filter { margin-top: 0.5rem !important; }
+    }
+    @media (min-width:769px) {
+        .card-datatable { overflow-x: visible; }
+        .dataTables_wrapper { overflow-x: visible; }
+        .datatables-users { width: 100% !important; table-layout: auto !important; }
+    }
+</style>
+<script>
+// CSRF helper
+function getCsrfToken() {
+    const input = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (input) return input.value;
+    const cookies = document.cookie.split(';');
+    for (let c of cookies) {
+        c = c.trim();
+        if (c.startsWith('csrftoken=')) return c.substring('csrftoken='.length);
+    }
+    return '';
+}
+
+function confirmDeleteRole(roleCode, roleName, userCount) {
+    if (roleCode === 'SUPERUSER') {
+        Swal.fire({ icon: 'error', title: 'Tidak Diizinkan', text: 'Role SUPERUSER tidak dapat dihapus.', confirmButtonText: 'OK', customClass: { confirmButton: 'btn btn-primary' } });
+        return;
+    }
+
+    if (userCount > 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Role Masih Digunakan',
+            html: `<p>Role <strong>${roleName}</strong> masih digunakan oleh <strong>${userCount} user</strong>.</p>
+                   <p class="text-muted mb-0">Jika dihapus paksa, semua user akan dipindahkan ke <strong>tanpa role</strong>.</p>`,
+            showCancelButton: true,
+            confirmButtonText: '<i class="ri-delete-bin-line me-1"></i>Hapus Paksa',
+            cancelButtonText: 'Batal',
+            customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-label-secondary' }
+        }).then((result) => {
+            if (result.isConfirmed) deleteRole(roleCode, true);
+        });
+        return;
+    }
+
+    Swal.fire({
+        icon: 'warning',
+        title: 'Konfirmasi Hapus',
+        html: `<p>Apakah Anda yakin ingin menghapus role <strong>${roleName}</strong>?</p>
+               <p class="text-muted mb-0">Tindakan ini tidak dapat dibatalkan.</p>`,
+        showCancelButton: true,
+        confirmButtonText: '<i class="ri-delete-bin-line me-1"></i>Ya, Hapus!',
+        cancelButtonText: 'Batal',
+        customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-label-secondary' }
+    }).then((result) => {
+        if (result.isConfirmed) deleteRole(roleCode, false);
+    });
+}
+
+function deleteRole(roleCode, force) {
+    Swal.fire({ title: 'Menghapus role...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+    fetch(`/access/roles/delete/${roleCode}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ force: force })
+    })
+    .then(response => response.json().then(data => ({ ok: response.ok, status: response.status, data: data })))
+    .then(result => {
+        if (result.ok && result.data.success) {
+            Swal.fire({ icon: 'success', title: 'Berhasil!', html: result.data.message || 'Role berhasil dihapus.', confirmButtonText: 'OK', customClass: { confirmButton: 'btn btn-success' } })
+            .then(() => { window.location.reload(); });
+        } else {
+            const msg = result.data.message || 'Gagal menghapus role.';
+            if (result.data.has_users && !force) {
+                Swal.fire({
+                    icon: 'warning', title: 'Role Masih Digunakan',
+                    html: `<p>${msg}</p>`,
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="ri-delete-bin-line me-1"></i>Hapus Paksa',
+                    cancelButtonText: 'Batal',
+                    customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-label-secondary' }
+                }).then((res) => { if (res.isConfirmed) deleteRole(roleCode, true); });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Gagal!', html: msg, confirmButtonText: 'OK', customClass: { confirmButton: 'btn btn-primary' } });
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({ icon: 'error', title: 'Error!', text: 'Terjadi kesalahan jaringan. Silakan coba lagi.', confirmButtonText: 'OK', customClass: { confirmButton: 'btn btn-primary' } });
+    });
+}
+</script>
+
+<script src="{% static 'js/modal-edit-role.js' %}"></script>
+{% endblock page_js %}

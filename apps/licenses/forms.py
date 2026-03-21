@@ -1,0 +1,116 @@
+"""
+==========================================================================
+ LICENSES FORMS — Form untuk Client, Product, LicenseKey
+==========================================================================
+ ModelForm dengan widget Materialize (Bootstrap 5 classes).
+ Digunakan oleh views_ui.py untuk CRUD.
+==========================================================================
+"""
+from django import forms
+from .models import Client, Product, LicenseKey
+
+
+class ClientForm(forms.ModelForm):
+    """Form untuk menambah/edit data klien."""
+
+    class Meta:
+        model = Client
+        fields = ['name', 'email', 'phone', 'address']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Masukkan nama klien/perusahaan',
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'contoh@email.com',
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '+62 812-xxxx-xxxx',
+            }),
+            'address': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Alamat lengkap klien',
+            }),
+        }
+
+
+class ProductForm(forms.ModelForm):
+    """Form untuk menambah/edit data produk."""
+
+    class Meta:
+        model = Product
+        fields = ['name', 'code', 'description']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Contoh: SERPTECH ERP System',
+            }),
+            'code': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Contoh: ERP, SIMKOS',
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Deskripsi singkat produk',
+            }),
+        }
+
+
+class LicenseKeyForm(forms.ModelForm):
+    """Form untuk membuat kunci lisensi baru."""
+
+    class Meta:
+        model = LicenseKey
+        fields = ['product', 'client', 'duration_days', 'max_devices', 'status', 'registered_domain']
+        widgets = {
+            'product': forms.Select(attrs={
+                'class': 'form-select',
+            }),
+            'client': forms.Select(attrs={
+                'class': 'form-select',
+            }),
+            'duration_days': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': '365',
+            }),
+            'max_devices': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': '1',
+                'min': '1',
+            }),
+            'status': forms.Select(attrs={
+                'class': 'form-select',
+            }),
+            'registered_domain': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'contoh: pt-abadi.erpserver.com (opsional)',
+            }),
+        }
+
+
+class LicenseKeyUpdateForm(forms.ModelForm):
+    """Form untuk mengupdate lisensi (status, durasi, domain, maks perangkat)."""
+
+    class Meta:
+        model = LicenseKey
+        fields = ['status', 'duration_days', 'max_devices', 'registered_domain']
+        widgets = {
+            'status': forms.Select(attrs={
+                'class': 'form-select',
+            }),
+            'duration_days': forms.NumberInput(attrs={
+                'class': 'form-control',
+            }),
+            'max_devices': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '1',
+            }),
+            'registered_domain': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'contoh: pt-abadi.erpserver.com',
+            }),
+        }

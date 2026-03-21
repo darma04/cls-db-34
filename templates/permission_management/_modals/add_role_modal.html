@@ -1,0 +1,302 @@
+{% comment %}
+==========================================================================
+   ADD ROLE MODAL - Modal Tambah Role Baru (CLS)
+   Desain konsisten dengan SIMKOS — perm-card collapsible
+==========================================================================
+{% endcomment %}
+<div class="modal fade" id="addRoleModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content p-3">
+      <button type="button" class="btn-close btn-pinned" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-body p-md-2">
+        <div class="text-center mb-4">
+          <h3 class="mb-2 pb-1">Add New Role</h3>
+          <p>Configure module and sub-page permissions for this role</p>
+        </div>
+        <form id="addRoleForm" class="row g-3">
+          {% csrf_token %}
+          <div class="col-12">
+            <div class="form-floating form-floating-outline">
+              <input type="text" id="role_name" name="role_name" class="form-control" placeholder="Role Name" required/>
+              <label for="role_name">Role Name (e.g., OPERATOR, STAFF)</label>
+            </div>
+          </div>
+
+          <div class="col-12 mt-4">
+            <h6 class="mb-3"><i class="ri-shield-check-line me-2"></i>Module Permissions</h6>
+            <small class="text-muted">Toggle sub-pages for granular permission control</small>
+          </div>
+
+          <div id="permissionCheckboxContainer" class="col-12">
+            <!-- Will be populated by JavaScript -->
+          </div>
+
+          <div class="col-12 text-center mt-4">
+            <button type="submit" class="btn btn-primary me-2">
+              <i class="ri-add-line me-1"></i>Create Role
+            </button>
+            <button type="reset" class="btn btn-outline-secondary" data-bs-dismiss="modal">Discard</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* ═══ Permission Card Styles ═══ */
+  .perm-card {
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: .5rem;
+    margin-bottom: .75rem;
+    overflow: hidden;
+    transition: box-shadow .2s;
+  }
+  .perm-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .perm-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .625rem .875rem;
+    background: rgba(var(--bs-primary-rgb), .04);
+    border-bottom: 1px solid rgba(0,0,0,.06);
+    min-height: 48px;
+  }
+  .perm-card-header .module-title {
+    font-weight: 600;
+    font-size: .875rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .perm-card-header .perm-actions {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+  }
+  .perm-card-header .perm-actions .perm-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 48px;
+    gap: 2px;
+  }
+  .perm-card-header .perm-actions .perm-col .perm-label {
+    font-size: .625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: #697a8d;
+    line-height: 1;
+  }
+
+  /* Sub-module table */
+  .perm-sub-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .875rem;
+  }
+  .perm-sub-table thead th {
+    padding: .5rem .875rem;
+    font-size: .8125rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: #697a8d;
+    background: rgba(0,0,0,.02);
+    border-bottom: 1px solid rgba(0,0,0,.08);
+  }
+  .perm-sub-table thead th:first-child { padding-left: 1.25rem; }
+  .perm-sub-table thead th:not(:first-child) { text-align: center; width: 80px; }
+  .perm-sub-table tbody tr { border-bottom: 1px solid rgba(0,0,0,.04); }
+  .perm-sub-table tbody tr:last-child { border-bottom: none; }
+  .perm-sub-table tbody td { padding: .5rem .875rem; vertical-align: middle; font-size: .875rem; }
+  .perm-sub-table tbody td:first-child { padding-left: 1.25rem; color: #566a7f; }
+  .perm-sub-table tbody td:not(:first-child) { text-align: center; }
+  .perm-sub-table tbody tr:hover { background: rgba(var(--bs-primary-rgb), .02); }
+
+  .perm-card-header .module-icon {
+    font-size: 1.125rem;
+    color: rgba(var(--bs-primary-rgb), .7);
+    flex-shrink: 0;
+  }
+  .perm-toggle-btn {
+    width: 28px; height: 28px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: none; background: transparent;
+    border-radius: .375rem; color: #697a8d; transition: all .2s; flex-shrink: 0;
+  }
+  .perm-toggle-btn:hover { background: rgba(0,0,0,.06); }
+  .perm-toggle-btn i { font-size: 1.125rem; transition: transform .25s; }
+  .perm-toggle-btn[aria-expanded="true"] i { transform: rotate(180deg); }
+</style>
+
+<script>
+// Module and Sub-Module structure from model
+const MODULE_STRUCTURE = {{ module_structure|safe }};
+
+// Icon mapping for CLS modules (matches sidebar icons)
+const MODULE_ICONS = {
+  'dashboard': 'ri-home-smile-line',
+  'licenses': 'ri-key-2-line',
+  'pembelian': 'ri-shopping-cart-2-line',
+  'laporan': 'ri-bar-chart-2-line',
+  'ai': 'ri-robot-line',
+  'user_management': 'ri-user-settings-line',
+  'access_control': 'ri-shield-user-line',
+  'activity_log': 'ri-history-line',
+  'automation': 'ri-telegram-line',
+  'pengaturan': 'ri-settings-3-line',
+};
+
+const _renderedContainers = {};
+
+function renderPermissionCheckboxes(containerId, mode = 'add') {
+  const guardKey = `${containerId}_${mode}`;
+  if (_renderedContainers[guardKey]) return;
+
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  let html = '';
+  const prefix = mode === 'edit' ? 'edit' : 'add';
+
+  Object.entries(MODULE_STRUCTURE).forEach(([moduleCode, moduleData]) => {
+    const moduleName = moduleData.name;
+    const subModules = moduleData.sub_modules || [];
+    const hasSubModules = subModules.length > 0;
+    const moduleIcon = MODULE_ICONS[moduleCode] || 'ri-apps-line';
+
+    html += `
+      <div class="perm-card">
+        <div class="perm-card-header">
+          <div class="module-title">
+            ${hasSubModules ? `
+              <button class="perm-toggle-btn" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#collapse_${prefix}_${moduleCode}" aria-expanded="false">
+                <i class="ri-arrow-down-s-line"></i>
+              </button>
+            ` : '<span style="width:28px;display:inline-block"></span>'}
+            <i class="${moduleIcon} module-icon"></i>
+            ${moduleName}
+          </div>
+          <div class="perm-actions">
+            <div class="perm-col">
+              <span class="perm-label">View</span>
+              <input class="form-check-input module-perm" type="checkbox"
+                     id="${prefix}_${moduleCode}_view" name="perms[${moduleCode}][view]"
+                     data-module="${moduleCode}" data-action="view" style="cursor:pointer">
+            </div>
+            <div class="perm-col">
+              <span class="perm-label">Create</span>
+              <input class="form-check-input module-perm" type="checkbox"
+                     id="${prefix}_${moduleCode}_create" name="perms[${moduleCode}][create]"
+                     data-module="${moduleCode}" data-action="create" style="cursor:pointer">
+            </div>
+            <div class="perm-col">
+              <span class="perm-label">Edit</span>
+              <input class="form-check-input module-perm" type="checkbox"
+                     id="${prefix}_${moduleCode}_edit" name="perms[${moduleCode}][edit]"
+                     data-module="${moduleCode}" data-action="edit" style="cursor:pointer">
+            </div>
+            <div class="perm-col">
+              <span class="perm-label">Delete</span>
+              <input class="form-check-input module-perm" type="checkbox"
+                     id="${prefix}_${moduleCode}_delete" name="perms[${moduleCode}][delete]"
+                     data-module="${moduleCode}" data-action="delete" style="cursor:pointer">
+            </div>
+          </div>
+        </div>
+        ${hasSubModules ? `
+          <div class="collapse" id="collapse_${prefix}_${moduleCode}">
+            <table class="perm-sub-table">
+              <thead>
+                <tr>
+                  <th>Sub-Halaman</th>
+                  <th>Tampilkan</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${subModules.map(sub => `
+                <tr>
+                  <td>${sub.name}</td>
+                  <td>
+                    <input class="form-check-input sub-perm" type="checkbox"
+                           id="${prefix}_${moduleCode}_${sub.code}_view"
+                           name="perms[${moduleCode}][subs][${sub.code}][view]"
+                           data-module="${moduleCode}" data-sub="${sub.code}" data-action="view"
+                           style="cursor:pointer">
+                  </td>
+                </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+  _renderedContainers[guardKey] = true;
+}
+
+// Inisialisasi Add Role Modal
+document.addEventListener('DOMContentLoaded', function() {
+  const addModal = document.getElementById('addRoleModal');
+  const addForm = document.getElementById('addRoleForm');
+
+  if (addModal) {
+    addModal.addEventListener('show.bs.modal', function() {
+      renderPermissionCheckboxes('permissionCheckboxContainer', 'add');
+    });
+    addModal.addEventListener('hidden.bs.modal', function() {
+      addModal.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+      if (addForm) addForm.reset();
+    });
+  }
+
+  if (addForm) {
+    addForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      submitAddRole(addForm);
+    });
+  }
+});
+
+function submitAddRole(form) {
+  const formData = new FormData(form);
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalBtnText = submitBtn.innerHTML;
+
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Membuat...';
+
+  const csrfToken = document.querySelector('#addRoleForm [name=csrfmiddlewaretoken]').value;
+
+  fetch('/access/roles/ajax/create/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken },
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message || 'Role berhasil ditambahkan!', timer: 2000, showConfirmButton: false });
+      const modalInstance = bootstrap.Modal.getInstance(document.getElementById('addRoleModal'));
+      if (modalInstance) modalInstance.hide();
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      Swal.fire({ icon: 'error', title: 'Error!', text: data.message || 'Gagal menambahkan role' });
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalBtnText;
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    Swal.fire({ icon: 'error', title: 'Error!', text: 'Terjadi kesalahan saat menambahkan role' });
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalBtnText;
+  });
+}
+</script>

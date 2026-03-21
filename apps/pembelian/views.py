@@ -1,0 +1,155 @@
+"""
+Views Pembelian Lisensi - CRUD transaksi pembelian.
+"""
+from django.shortcuts import redirect, get_object_or_404
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import ListView, DetailView, CreateView, TemplateView
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.urls import reverse_lazy, reverse
+from django.db import transaction
+from django.db.models import Sum
+from web_project import TemplateLayout
+from .models import PembelianLisensi, PembelianLisensiItem
+from apps.licenses.models import Product, Client
+
+
+class PembelianListView(LoginRequiredMixin, ListView):
+    model = PembelianLisensi
+    template_name = 'pembelian/pembelian_list.html'
+    context_object_name = 'pembelian_list'
+    paginate_by = 25
+
+    def get_queryset(self):
+        qs = super().get_queryset().select_related('klien', 'dibuat_oleh')
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+            
+        search_query = self.request.GET.get('q', '')
+        if search_query:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(nomor_transaksi__icontains=search_query) |
+                Q(klien__name__icontains=search_query)
+            )
+
+        # Filter by Date
+        start_date = self.request.GET.get('start_date')
+        end_date = self.request.GET.get('end_date')
+        if start_date:
+            qs = qs.filter(tanggal__gte=start_date)
+        if end_date:
+            qs = qs.filter(tanggal__lte=end_date)
+            
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = TemplateLayout.init(self, super().get_context_data(**kwargs))
+        
+        # Calculate totals from the filtered QuerySet, NOT the entire table
+        filtered_qs = self.get_queryset()
+        context['total_pembelian'] = filtered_qs.count()
+        context['total_completed'] = filtered_qs.filter(status='completed').count()
+        context['total_pending'] = filtered_qs.filter(status='pending').count()
+        context['total_pendapatan'] = filtered_qs.filter(
+            status='completed'
+        ).aggregate(total=Sum('total_harga'))['total'] or 0
+        
+        context['start_date'] = self.request.GET.get('start_date', '')
+        context['end_date'] = self.request.GET.get('end_date', '')
+        return context
+
+
+class PembelianCreateView(LoginRequiredMixin, TemplateView):
+    template_name = 'pembelian/pembelian_form.html'
+
+    def get_context_data(self, **kwargs):
+        context = TemplateLayout.init(self, super().get_context_data(**kwargs))
+        context['klien_list'] = Client.objects.all().order_by('name')
+        context['produk_list'] = Product.objects.all().order_by('name')
+        return context
+
+    def post(self, request, *args, **kwargs):
+        klien_id = request.POST.get('klien')
+        catatan = request.POST.get('catatan', '')
+        produk_ids = request.POST.getlist('produk[]')
+        jumlah_list = request.POST.getlist('jumlah[]')
+        harga_list = request.POST.getlist('harga[]')
+        durasi_list = request.POST.getlist('durasi[]')
+
+        if not klien_id or not produk_ids:
+            messages.error(request, 'Pilih klien dan minimal 1 produk!')
+            return redirect('pembelian:pembelian_create')
+
+        try:
+            with transaction.atomic():
+                klien = Client.objects.get(pk=klien_id)
+                pembelian = PembelianLisensi.objects.create(
+                    klien=klien, catatan=catatan, dibuat_oleh=request.user
+                )
+
+                for i, produk_id in enumerate(produk_ids):
+                    produk = Product.objects.get(pk=produk_id)
+                    jumlah = int(jumlah_list[i]) if i < len(jumlah_list) else 1
+                    harga = float(harga_list[i]) if i < len(harga_list) else 0
+                    durasi = int(durasi_list[i]) if i < len(durasi_list) else 365
+                    PembelianLisensiItem.objects.create(
+                        pembelian=pembelian, produk=produk,
+                        jumlah=jumlah, harga_satuan=harga, durasi_hari=durasi
+                    )
+                pembelian.update_total()
+
+            # Kirim notifikasi Telegram
+            try:
+                from apps.automation.telegram_service import kirim_notifikasi_async
+                kirim_notifikasi_async('pembelian', pembelian.nomor_transaksi, {
+                    'nomor_transaksi': pembelian.nomor_transaksi,
+                    'client_name': klien.name,
+                    'product_name': ', '.join([Product.objects.get(pk=pid).name for pid in produk_ids]),
+                    'total': f"{float(pembelian.total_harga):,.0f}",
+                    'tanggal': pembelian.tanggal.strftime('%d/%m/%Y'),
+                })
+            except Exception:
+                pass
+
+            messages.success(request, f'Pembelian {pembelian.nomor_transaksi} berhasil dibuat!')
+            return redirect('pembelian:pembelian_detail', pk=pembelian.pk)
+        except Exception as e:
+            messages.error(request, f'Gagal membuat pembelian: {str(e)}')
+            return redirect('pembelian:pembelian_create')
+
+
+class PembelianDetailView(LoginRequiredMixin, DetailView):
+    model = PembelianLisensi
+    template_name = 'pembelian/pembelian_detail.html'
+    context_object_name = 'pembelian'
+
+    def get_context_data(self, **kwargs):
+        context = TemplateLayout.init(self, super().get_context_data(**kwargs))
+        context['items'] = self.object.items.select_related('produk').all()
+        return context
+
+
+@login_required
+def pembelian_update_status(request, pk):
+    if request.method == 'POST':
+        pembelian = get_object_or_404(PembelianLisensi, pk=pk)
+        new_status = request.POST.get('status')
+        if new_status in dict(PembelianLisensi.STATUS_CHOICES):
+            pembelian.status = new_status
+            pembelian.save()
+            messages.success(request, f'Status pembelian {pembelian.nomor_transaksi} diubah menjadi {pembelian.get_status_display()}')
+        return redirect('pembelian:pembelian_detail', pk=pk)
+    return redirect('pembelian:pembelian_list')
+
+
+@login_required
+def pembelian_delete(request, pk):
+    if request.method == 'POST':
+        pembelian = get_object_or_404(PembelianLisensi, pk=pk)
+        nomor = pembelian.nomor_transaksi
+        pembelian.delete()
+        messages.success(request, f'Pembelian {nomor} berhasil dihapus!')
+    return redirect('pembelian:pembelian_list')

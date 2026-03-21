@@ -1,0 +1,79 @@
+{% comment %}
+Reusable Action Column Template
+================================
+Dynamic action column rendering berdasarkan user permissions.
+
+Required variables:
+  - module: Module name for permission checking (e.g., 'produk', 'inventory')
+  - item: The object instance
+  - view_url: (optional) URL for view action
+  - edit_url: (optional) URL for edit action  
+  - delete_url: (optional) URL for delete action
+  - item_id: (optional) ID for delete confirmation, defaults to item.id
+
+Usage Example:
+  {% include 'shared/action_column.html' with module='produk' item=produk view_url=produk.get_absolute_url edit_url=produk.get_edit_url delete_url=produk.get_delete_url %}
+
+Display Logic:
+  - If user has ONLY view permission → Show "View Only" badge
+  - If user has edit AND/OR delete → Show dropdown menu (titik 3) with permitted actions
+  - Actions not permitted are hidden from dropdown
+{% endcomment %}
+
+{% load core_tags %}
+
+{% user_can 'update' module as can_edit %}
+{% user_can 'delete' module as can_delete %}
+{% user_can 'read' module as can_view %}
+
+{% if can_edit or can_delete %}
+  {# User punya permission edit atau delete → Tampilkan dropdown menu #}
+  <div class="dropdown">
+    <button type="button" class="btn btn-sm btn-icon" data-bs-toggle="dropdown" aria-expanded="false">
+      <i class="ri-more-2-line"></i>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      {% if view_url and can_view %}
+      <li>
+        <a class="dropdown-item" href="{{ view_url }}">
+          <i class="ri-eye-line me-2"></i>View Detail
+        </a>
+      </li>
+      {% endif %}
+      
+      {% if edit_url and can_edit %}
+      <li>
+        <a class="dropdown-item" href="{{ edit_url }}">
+          <i class="ri-edit-line me-2"></i>Edit
+        </a>
+      </li>
+      {% endif %}
+      
+      {% if delete_url and can_delete %}
+      {% if view_url and can_view or edit_url and can_edit %}
+      <li>
+        <hr class="dropdown-divider">
+      </li>
+      {% endif %}
+      <li>
+        <a class="dropdown-item text-danger delete-item" 
+           href="javascript:void(0);" 
+           data-url="{{ delete_url }}"
+           data-id="{{ item_id|default:item.id }}">
+          <i class="ri-delete-bin-line me-2"></i>Hapus
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </div>
+
+{% elif can_view %}
+  {# User HANYA punya permission view → Tampilkan teks "View Only" #}
+  <span class="badge bg-label-secondary">
+    <i class="ri-eye-line me-1"></i>View Only
+  </span>
+
+{% else %}
+  {# User TIDAK punya permission apapun → Tampilkan strip #}
+  <span class="text-muted">—</span>
+{% endif %}

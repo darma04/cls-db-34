@@ -1,0 +1,125 @@
+{% extends 'layout/layout_vertical.html' %}
+{% comment %}
+==========================================================================
+   LICENSE FORM - Form Buat/Edit Lisensi
+==========================================================================
+{% endcomment %}
+{% load static %}
+
+{% block title %}{{ title }} - Central License Server{% endblock title %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="ri-key-2-line me-2 text-primary"></i>{{ title }}</h4>
+            <p class="text-muted mb-0">{% if is_edit %}Ubah status atau detail lisensi{% else %}Generate kunci lisensi baru untuk klien{% endif %}</p>
+        </div>
+        <a href="{% url 'licenses_ui:licensekey_list' %}" class="btn btn-label-secondary">
+            <i class="ri-arrow-left-line me-2"></i>Kembali
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-8 col-lg-10 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        {% if form.errors %}
+                        <div class="alert alert-danger alert-dismissible" role="alert">
+                            <h5 class="alert-heading mb-1">
+                                <i class="ri-error-warning-line me-2"></i>Form Error
+                            </h5>
+                            <ul class="mb-0">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ field.label }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endif %}
+
+                        {% if not is_edit %}
+                        <!-- Create mode: pick product and client -->
+                        <h5 class="card-title mb-3">
+                            <i class="ri-links-line me-2"></i>Produk & Klien
+                        </h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label" for="id_product">
+                                    Produk <span class="text-danger">*</span>
+                                </label>
+                                {{ form.product }}
+                                <div class="form-text">Pilih produk untuk lisensi ini</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="id_client">
+                                    Klien <span class="text-danger">*</span>
+                                </label>
+                                {{ form.client }}
+                                <div class="form-text">Pilih klien pemilik lisensi</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <h5 class="card-title mb-3">
+                            <i class="ri-settings-3-line me-2"></i>Pengaturan Lisensi
+                        </h5>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label" for="id_status">
+                                    Status
+                                </label>
+                                {{ form.status }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="id_duration_days">
+                                    Durasi (Hari)
+                                </label>
+                                {{ form.duration_days }}
+                                <div class="form-text">Masa berlaku lisensi</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="id_registered_domain">
+                                    Domain Terdaftar
+                                </label>
+                                {{ form.registered_domain }}
+                                <div class="form-text">Opsional</div>
+                            </div>
+                        </div>
+
+                        {% if not is_edit %}
+                        <div class="alert alert-info mt-3" role="alert">
+                            <div class="d-flex align-items-center">
+                                <i class="ri-information-line ri-22px me-2"></i>
+                                <div>
+                                    <strong>Info:</strong> Kunci lisensi akan di-generate otomatis saat disimpan.
+                                    Format: <code>KODE_PRODUK-TAHUN-XXXX-YYYY</code>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                            <a href="{% url 'licenses_ui:licensekey_list' %}" class="btn btn-label-secondary">
+                                <i class="ri-close-line me-2"></i>Batal
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="ri-save-line me-2"></i>
+                                {% if is_edit %}Update Lisensi{% else %}Generate Lisensi{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
