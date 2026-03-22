@@ -124,13 +124,49 @@ def export_templates(request):
 
 def pengaturan_perusahaan(request):
     """
-    Menyediakan data pengaturan perusahaan boilerplate ke SEMUA template.
+    Menyediakan data pengaturan perusahaan ke SEMUA template.
+
+    Data yang disuntikkan:
+    - pengaturan → Object PengaturanPerusahaan lengkap
+    - system_logo_url → URL logo sistem (untuk sidebar)
+    - system_favicon_url → URL favicon (untuk tab browser)
+    - system_title → Judul sistem (untuk tag <title>)
+    - system_description → Deskripsi sistem (untuk meta tag SEO)
+    - system_keywords → Keywords sistem (untuk meta tag SEO)
+
+    OPTIMASI: Cache selama 60 detik agar tidak query DB setiap request.
+
+    Koneksi:
+    - apps/pengaturan/models.py → Model PengaturanPerusahaan (singleton)
+    - templates/layout/ → Template layout yang menggunakan logo, favicon, title
     """
-    return {
-        'pengaturan': None,
-        'system_logo_url': None,
-        'system_favicon_url': None,
-        'system_title': 'Central License Server',
-        'system_description': 'License Management System',
-        'system_keywords': 'license, erp',
-    }
+    from django.core.cache import cache
+
+    cache_key = 'ctx_pengaturan_perusahaan'
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    try:
+        from apps.pengaturan.models import PengaturanPerusahaan
+        pengaturan = PengaturanPerusahaan.load()  # Muat singleton (pk=1)
+        result = {
+            'pengaturan': pengaturan,
+            'system_logo_url': pengaturan.system_logo.url if pengaturan.system_logo else None,
+            'system_favicon_url': pengaturan.system_favicon.url if pengaturan.system_favicon else None,
+            'system_title': pengaturan.system_title or 'Central License Server',
+            'system_description': pengaturan.system_description or '',
+            'system_keywords': pengaturan.system_keywords or '',
+        }
+        cache.set(cache_key, result, 60)  # Cache 60 detik
+        return result
+    except Exception:
+        default = {
+            'pengaturan': None,
+            'system_logo_url': None,
+            'system_favicon_url': None,
+            'system_title': 'Central License Server',
+            'system_description': '',
+            'system_keywords': '',
+        }
+        return default

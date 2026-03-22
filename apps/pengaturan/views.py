@@ -69,8 +69,19 @@ class PerusahaanView(LoginRequiredMixin, UpdateView):
         return context
 
     def form_valid(self, form):
+        from django.core.cache import cache
+        # Hapus cache context processor agar data terbaru langsung dimuat
+        cache.delete('ctx_pengaturan_perusahaan')
         messages.success(self.request, 'Pengaturan perusahaan berhasil disimpan!')
         return super().form_valid(form)
+
+    def form_invalid(self, form):
+        # Tampilkan error validasi form ke user agar tidak gagal diam-diam
+        for field, errors in form.errors.items():
+            for error in errors:
+                field_label = form.fields[field].label if field in form.fields else field
+                messages.error(self.request, f'{field_label}: {error}')
+        return super().form_invalid(form)
 
 
 class TemplateCetakListView(LoginRequiredMixin, ListView):
