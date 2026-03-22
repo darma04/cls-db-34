@@ -98,9 +98,10 @@ urlpatterns = [
     path("", include("apps.pages.urls")),
 ]
 
-# Media files (development only)
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Media files — dilayani di semua environment (development & production)
+# WhiteNoise hanya menangani static files, bukan media files.
+# Agar foto/upload berfungsi di production, Django harus tetap melayani media.
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # Error Handlers
 handler404 = custom_error_404
