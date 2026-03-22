@@ -1,0 +1,774 @@
+/*
+* demo.css
+* File include item demo only specific css only
+******************************************************************************/
+
+.light-style .menu .app-brand.demo {
+  height: 64px;
+}
+
+.dark-style .menu .app-brand.demo {
+  height: 64px;
+}
+
+.app-brand-logo.demo svg {
+  width: 38px;
+  height: 20px;
+}
+
+.app-brand-text.demo {
+  font-size: 1.25rem;
+  letter-spacing: 0.15px;
+}
+
+/* ! For .layout-navbar-fixed added fix padding top tpo .layout-page */
+.layout-navbar-fixed .layout-wrapper:not(.layout-without-menu) .layout-page {
+  padding-top: 64px !important;
+}
+
+/* Navbar page z-index issue solution */
+.content-wrapper .navbar {
+  z-index: auto;
+}
+
+/*
+* Content
+******************************************************************************/
+
+.demo-blocks > * {
+  display: block !important;
+}
+
+.demo-inline-spacing > * {
+  margin: 1rem 0.375rem 0 0 !important;
+}
+
+/* ? .demo-vertical-spacing class is used to have vertical margins between elements. To remove margin-top from the first-child, use .demo-only-element class with .demo-vertical-spacing class. For example, we have used this class in forms-input-groups.html file. */
+.demo-vertical-spacing > * {
+  margin-top: 1.25rem !important;
+  margin-bottom: 0 !important;
+}
+.demo-vertical-spacing.demo-only-element > :first-child {
+  margin-top: 0 !important;
+}
+
+.demo-vertical-spacing-lg > * {
+  margin-top: 1.875rem !important;
+  margin-bottom: 0 !important;
+}
+.demo-vertical-spacing-lg.demo-only-element > :first-child {
+  margin-top: 0 !important;
+}
+
+.demo-vertical-spacing-xl > * {
+  margin-top: 5rem !important;
+  margin-bottom: 0 !important;
+}
+.demo-vertical-spacing-xl.demo-only-element > :first-child {
+  margin-top: 0 !important;
+}
+
+.rtl-only {
+  display: none !important;
+  text-align: left !important;
+  direction: ltr !important;
+}
+
+[dir='rtl'] .rtl-only {
+  display: block !important;
+}
+
+/* Dropdown buttons going out of small screens */
+@media (max-width: 576px) {
+  #dropdown-variation-demo .btn-group .text-truncate {
+    width: 300px;
+    position: relative;
+  }
+  #dropdown-variation-demo .btn-group .text-truncate::after {
+    position: absolute;
+    top: 45%;
+    right: 0.65rem;
+  }
+}
+
+/******************************************************************************
+*  MOBILE RESPONSIVE - Perbaikan Tampilan Mobile untuk Semua Halaman
+* ==========================================================================
+*  CSS ini memperbaiki tampilan mobile secara GLOBAL sehingga semua
+*  halaman CRUD (50+), laporan, pengaturan, dan form langsung responsif
+*  tanpa perlu edit template HTML satu per satu.
+*
+*  Area yang diperbaiki:
+*  1. Sidebar menu scrolling (bisa akses semua menu)
+*  2. Header halaman (judul + tombol aksi stack vertikal)
+*  3. Card header (judul tabel + export Excel/PDF compact)
+*  4. Tombol — ukuran compact 11-13px, padding hemat
+*  5. Export Excel/PDF — ukuran kecil, icon tersembunyi di HP kecil
+*  6. Filter card layout (inputs stack vertikal)
+*  7. Font size heading (16px → 14px → 12px bertahap)
+*  8. Tabel responsive (horizontal scroll, font compact)
+*  9. Modal, alert, pagination, badge, form input
+*  10. Dashboard cards & statistik
+*
+*  Breakpoint:
+*  - ≤ 768px → Tablet & HP umum
+*  - ≤ 480px → HP layar kecil (iPhone SE dll)
+*
+*  Catatan: Semua komentar dalam Bahasa Indonesia
+******************************************************************************/
+
+/* ─────────────────────────────────────────────────
+   1. SIDEBAR SCROLL FIX (Berlaku semua ukuran layar)
+   ─────────────────────────────────────────────────
+   Masalah: Di mobile, menu sidebar terpotong — menu
+   "Pengaturan" di paling bawah tidak bisa diakses.
+
+   Solusi:
+   - Gunakan 100dvh (dynamic viewport height) yang
+     memperhitungkan address bar browser mobile.
+   - Tambahkan padding-bottom ekstra agar item terakhir
+     tidak tertutup oleh navigation bar browser.
+   - Overflow-y scroll agar sidebar selalu bisa discroll.
+   ───────────────────────────────────────────────── */
+
+/* Sidebar container: pastikan tidak melebihi viewport */
+.layout-menu {
+  max-height: 100vh !important;
+  max-height: 100dvh !important; /* Dynamic VH — untuk browser mobile */
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Menu inner list: area scrollable */
+.layout-menu .menu-inner {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch; /* Smooth scroll di iOS */
+  flex: 1 1 auto !important; /* Ambil sisa ruang yang tersedia */
+  min-height: 0 !important; /* Penting agar flex child bisa scroll */
+  padding-bottom: 5rem !important; /* Ruang ekstra agar item terakhir tidak tertutup */
+}
+
+/* Scrollbar sidebar: tipis dan semi-transparan */
+.layout-menu .menu-inner::-webkit-scrollbar {
+  width: 4px;
+}
+.layout-menu .menu-inner::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+/* ─────────────────────────────────────────────────
+   2. RESPONSIVE MOBILE (Layar ≤ 768px)
+   ─────────────────────────────────────────────────
+   Breakpoint 768px mencakup iPad portrait dan semua HP.
+   Semua rule di bawah berlaku untuk tablet & HP.
+   ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* ═══════════════════════════════════════════════
+     2a. HEADER HALAMAN (Judul + Tombol Aksi)
+     ═══════════════════════════════════════════════
+     Masalah: Judul halaman dan tombol CTA (Tambah, Catat,
+     dll) bersebelahan — di layar kecil saling menimpa.
+
+     Solusi: flex-wrap agar tombol turun ke baris baru,
+     judul mengambil lebar penuh, tombol CTA full-width.
+     ═══════════════════════════════════════════════ */
+
+  /* Container header: wrap agar tombol pindah ke bawah judul */
+  .container-xxl > .d-flex.justify-content-between.align-items-center.mb-4,
+  .container-xxl > .d-flex.justify-content-between.mb-4,
+  .container-p-y > .d-flex.justify-content-between.align-items-center.mb-4 {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Judul halaman (div pertama) mengambil full width */
+  .container-xxl > .d-flex.justify-content-between.align-items-center.mb-4 > div:first-child,
+  .container-xxl > .d-flex.justify-content-between.mb-4 > div:first-child,
+  .container-p-y > .d-flex.justify-content-between.align-items-center.mb-4 > div:first-child {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+
+  /* Tombol CTA header: full width, font 12px, padding compact
+     Berlaku untuk: Tambah Produk, Catat Pengeluaran, Buat SO, dll */
+  .container-xxl > .d-flex.justify-content-between.align-items-center.mb-4 > a.btn,
+  .container-xxl > .d-flex.justify-content-between.mb-4 > a.btn,
+  .container-p-y > .d-flex.justify-content-between.align-items-center.mb-4 > a.btn,
+  .container-xxl > .d-flex.justify-content-between.align-items-center.mb-4 > .btn,
+  .container-xxl > .d-flex.justify-content-between.mb-4 > .btn {
+    width: 100% !important;
+    text-align: center !important;
+    font-size: 0.75rem !important;    /* 12px — compact untuk mobile */
+    padding: 0.4rem 0.75rem !important; /* Padding hemat ruang */
+  }
+
+  /* Grup tombol (misal: Import + Tambah) juga full width */
+  .container-xxl > .d-flex.justify-content-between.align-items-center.mb-4 > .d-flex,
+  .container-xxl > .d-flex.justify-content-between.mb-4 > .d-flex {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     2b. UKURAN FONT HEADING (Compact di Mobile)
+     ═══════════════════════════════════════════════
+     Ukuran font diperkecil agar tidak memakan banyak
+     ruang vertikal di layar HP.
+     ═══════════════════════════════════════════════ */
+
+  /* h4: Judul utama halaman — 16px (turun dari 18px desktop) */
+  .container-xxl h4,
+  .container-p-y h4,
+  .content-wrapper h4 {
+    font-size: 1rem !important;       /* 16px */
+    line-height: 1.3 !important;
+  }
+
+  /* h5: Sub-judul / judul card — 14px */
+  .container-xxl h5,
+  .container-p-y h5,
+  .card-header h5 {
+    font-size: 0.875rem !important;   /* 14px */
+  }
+
+  /* h6: Judul kecil — 13px */
+  .container-xxl h6,
+  .container-p-y h6 {
+    font-size: 0.8125rem !important;  /* 13px */
+  }
+
+  /* Teks deskripsi/subtitle — 12px */
+  .container-xxl p.text-muted,
+  .container-p-y p.text-muted {
+    font-size: 0.75rem !important;    /* 12px */
+    margin-bottom: 0 !important;
+  }
+
+  /* Breadcrumb / page path — 13px */
+  .py-3.mb-4 {
+    font-size: 0.8125rem !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     2c. CARD HEADER (Judul Tabel + Tombol Export)
+     ═══════════════════════════════════════════════
+     Masalah: Nama tabel ("Daftar Kategori") dan tombol
+     export (Excel, PDF) bersebelahan, menimpa di mobile.
+
+     Solusi: flex-wrap agar judul full width, tombol export
+     turun ke bawah dan compact.
+     ═══════════════════════════════════════════════ */
+
+  /* Card header: wrap konten */
+  .card-header.d-flex.justify-content-between {
+    flex-wrap: wrap !important;
+    gap: 0.4rem !important;
+    padding: 0.75rem 1rem !important;
+  }
+
+  /* Judul card header full width */
+  .card-header.d-flex.justify-content-between > h5,
+  .card-header.d-flex.justify-content-between > h6 {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    margin-bottom: 0.15rem !important;
+  }
+
+  /* Container tombol export (d-flex gap-2) full width */
+  .card-header.d-flex.justify-content-between > .d-flex.gap-2 {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+
+  /* Tombol export di dalam .gap-2 → flex-grow supaya rata,
+     dengan override padding & font agar TIDAK gepeng/ciut di mobile.
+     Override btn-sm (11px / 0.25rem) menjadi ukuran yang nyaman */
+  .card-header.d-flex.justify-content-between > .d-flex.gap-2 > .btn {
+    flex: 1 1 0 !important;
+    text-align: center !important;
+    font-size: 0.8125rem !important;  /* 13px — override btn-sm 11px */
+    padding: 0.5rem 0.75rem !important; /* padding proporsional */
+    min-height: 2.25rem !important;   /* tinggi minimum 36px */
+  }
+
+  /* ═══════════════════════════════════════════════
+     2d. TOMBOL UMUM — Ukuran Mobile Compact
+     ═══════════════════════════════════════════════
+     Semua tombol: font 13px, tidak wrap text.
+     Tombol kecil (btn-sm): font 11px, padding mini.
+     ═══════════════════════════════════════════════ */
+
+  /* Tombol standar: 13px, compact */
+  .btn {
+    font-size: 0.8125rem !important;  /* 13px */
+    white-space: nowrap !important;
+  }
+
+  /* Tombol kecil (btn-sm): 11px — untuk export, aksi tabel, dll */
+  .btn-sm {
+    font-size: 0.6875rem !important;  /* 11px */
+    padding: 0.25rem 0.5rem !important;
+  }
+
+  /* Tombol di card header khusus export: extra compact */
+  .card-header .btn-sm {
+    font-size: 0.6875rem !important;  /* 11px */
+    padding: 0.25rem 0.5rem !important;
+  }
+
+  /* Grup tombol (d-flex gap-2): wrap jika terlalu panjang */
+  .d-flex.gap-2 {
+    flex-wrap: wrap !important;
+    gap: 0.35rem !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     2e. FILTER CARD — Inputs Stack Vertikal
+     ═══════════════════════════════════════════════ */
+  .card-body .row.g-3 .col-md-4,
+  .card-body .row.g-3 .col-md-3,
+  .card-body .row.g-3 .col-md-6 {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Kolom spacer kosong disembunyikan */
+  .card-body .row.g-3 .col-md-6:empty {
+    display: none !important;
+  }
+
+  /* Tombol filter (Terapkan/Reset) lebar penuh */
+  .card-body .d-grid.gap-2 {
+    width: 100% !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     2f. TABEL RESPONSIVE — Horizontal Scroll
+     ═══════════════════════════════════════════════ */
+  .card-datatable,
+  .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Header tabel: 12px, padding compact */
+  .table thead th {
+    font-size: 0.75rem !important;    /* 12px */
+    padding: 0.4rem 0.5rem !important;
+    white-space: nowrap !important;
+  }
+
+  /* Body tabel: 12px, padding compact */
+  .table tbody td {
+    font-size: 0.75rem !important;    /* 12px */
+    padding: 0.4rem 0.5rem !important;
+  }
+
+  /* Tombol aksi di dalam tabel: extra kecil */
+  .table tbody td .btn-sm,
+  .table tbody td .btn-icon {
+    font-size: 0.625rem !important;   /* 10px */
+    padding: 0.2rem 0.35rem !important;
+  }
+
+  /* Icon di dalam tombol tabel: 14px */
+  .table tbody td .btn-sm i,
+  .table tbody td .btn-icon i {
+    font-size: 0.875rem !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     2g. FOOTER RINGKASAN TABEL
+     ═══════════════════════════════════════════════ */
+  .table-footer-summary td {
+    font-size: 0.6875rem !important;  /* 11px */
+    padding: 0.4rem !important;
+  }
+
+  .table-footer-summary .badge {
+    font-size: 0.625rem !important;   /* 10px */
+    padding: 0.2rem 0.4rem !important;
+  }
+
+  .table-footer-summary strong {
+    font-size: 0.75rem !important;    /* 12px */
+  }
+
+  /* ═══════════════════════════════════════════════
+     2h. BADGE — Ukuran Compact di Mobile
+     ═══════════════════════════════════════════════ */
+  .badge {
+    font-size: 0.625rem !important;   /* 10px */
+    padding: 0.2rem 0.35rem !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     2i. ALERT & NOTIFIKASI
+     ═══════════════════════════════════════════════ */
+  .alert {
+    font-size: 0.75rem !important;    /* 12px */
+    padding: 0.6rem 0.75rem !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     2j. MODAL DIALOG — Tidak Keluar Layar
+     ═══════════════════════════════════════════════ */
+  .modal-dialog {
+    margin: 0.5rem !important;
+    max-width: calc(100% - 1rem) !important;
+  }
+
+  .modal-title {
+    font-size: 0.875rem !important;   /* 14px */
+  }
+
+  .modal-body {
+    font-size: 0.8125rem !important;  /* 13px */
+    padding: 0.75rem !important;
+  }
+
+  .modal-footer .btn {
+    font-size: 0.75rem !important;    /* 12px */
+    padding: 0.3rem 0.6rem !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     2k. DROPDOWN COLUMN PICKER
+     ═══════════════════════════════════════════════ */
+  .dropdown-menu {
+    max-width: calc(100vw - 2rem) !important;
+  }
+
+  .dropdown-menu[aria-labelledby="columnFilterDropdown"] {
+    min-width: auto !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     2l. FORM INPUT & LABEL — Compact
+     ═══════════════════════════════════════════════ */
+  .form-label {
+    font-size: 0.75rem !important;    /* 12px */
+    margin-bottom: 0.2rem !important;
+  }
+
+  .form-control,
+  .form-select {
+    font-size: 0.8125rem !important;  /* 13px */
+    padding: 0.35rem 0.6rem !important;
+  }
+
+  textarea.form-control {
+    min-height: 50px !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     2m. DATATABLES PAGINATION & INFO
+     ═══════════════════════════════════════════════
+     Masalah: Pagination menampilkan horizontal scrollbar
+     di mobile. Penyebab: container mewarisi overflow-x
+     dari .table-responsive atau lebar melebihi parent.
+
+     Solusi: overflow-x hidden, width 100%, flex-wrap.
+     ═══════════════════════════════════════════════ */
+  .dataTables_wrapper .dataTables_info {
+    font-size: 0.6875rem !important;  /* 11px */
+    padding: 0.4rem 0.75rem !important;
+    text-align: center !important;
+    overflow-x: hidden !important;
+  }
+
+  .dataTables_wrapper .dataTables_paginate {
+    padding: 0.4rem 0.5rem !important;
+    text-align: center !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 0.15rem !important;
+    overflow-x: hidden !important; /* Hapus horizontal scrollbar */
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 0.2rem 0.4rem !important;
+    font-size: 0.6875rem !important;  /* 11px */
+    margin: 0 !important;
+    min-width: auto !important;
+  }
+
+  /* Wrapper DataTables: cegah overflow pada bagian non-tabel
+     (info, pagination, filter). Selector "body ..." digunakan
+     agar specificity lebih tinggi dari inline <style> di template
+     yang menset overflow-x: auto pada .dataTables_wrapper.
+     Tabel itu sendiri tetap bisa scroll horizontal via .table-responsive */
+  body .dataTables_wrapper {
+    overflow-x: hidden !important;
+    overflow-x: clip !important; /* clip lebih kuat dari hidden — tidak bisa di-scroll */
+  }
+
+  /* Area info + pagination di bawah tabel: cegah overflow */
+  body .dataTables_wrapper > .row:last-child {
+    overflow-x: hidden !important;
+    overflow-x: clip !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Child cols di dalam row pagination: cegah overflow */
+  body .dataTables_wrapper > .row:last-child > [class*="col-"] {
+    overflow-x: hidden !important;
+    overflow-x: clip !important;
+    max-width: 100% !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  /* Area length + filter di atas tabel */
+  body .dataTables_wrapper > .row:first-child {
+    overflow-x: hidden !important;
+    overflow-x: clip !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 100% !important;
+  }
+
+  body .dataTables_wrapper > .row:first-child > [class*="col-"] {
+    overflow-x: hidden !important;
+    overflow-x: clip !important;
+    max-width: 100% !important;
+  }
+
+  /* Card-datatable: hanya tabel yang boleh scroll horizontal,
+     bukan pagination/info di luarnya. Prefix "body" agar
+     specificity lebih tinggi dari inline <style> di template */
+  body .card-datatable {
+    overflow-x: hidden !important;
+    overflow-x: clip !important;
+  }
+
+  /* KRUSIAL: Banyak template pakai <div class="card-datatable table-responsive">
+     (kedua class di satu elemen). Bootstrap .table-responsive set overflow-x: auto.
+     Compound selector ini meng-override Bootstrap agar wrapper luar TIDAK scroll,
+     hanya .table-responsive DALAM (generated DataTables dom option) yang scroll */
+  body .card-datatable.table-responsive {
+    overflow-x: hidden !important;
+    overflow-x: clip !important;
+    overflow: hidden !important;
+  }
+
+  /* Table-responsive di DALAM DataTables wrapper: INI boleh scroll */
+  body .card-datatable .dataTables_wrapper .table-responsive,
+  body .card-datatable > .dataTables_wrapper > .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dataTables_wrapper .dataTables_length,
+  .dataTables_wrapper .dataTables_filter {
+    padding: 0.4rem 0.75rem !important;
+    text-align: center !important;
+    float: none !important;
+    width: 100% !important;
+  }
+
+  .dataTables_wrapper .dataTables_filter input {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-top: 0.2rem !important;
+    display: block !important;
+  }
+
+  .dataTables_wrapper .dataTables_filter label {
+    display: block !important;
+    text-align: left !important;
+  }
+
+  .dataTables_wrapper .dataTables_length select {
+    margin: 0 0.2rem !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     2n. CARD BODY & CONTAINER — Padding Compact
+     ═══════════════════════════════════════════════ */
+  .container-xxl {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  .card-body {
+    padding: 0.75rem !important;
+  }
+
+  .card-header {
+    padding: 0.6rem 0.75rem !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     2o. NAV TABS — Scrollable di Mobile
+     ═══════════════════════════════════════════════ */
+  .nav-tabs {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nav-tabs .nav-link {
+    font-size: 0.75rem !important;    /* 12px */
+    padding: 0.4rem 0.6rem !important;
+    white-space: nowrap !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     2p. DASHBOARD CARDS — Statistik Compact
+     ═══════════════════════════════════════════════ */
+  .card .card-body .d-flex.align-items-center {
+    gap: 0.5rem !important;
+  }
+
+  .card .avatar {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .card .card-body h4 {
+    font-size: 1rem !important;       /* 16px */
+  }
+}
+
+/* ─────────────────────────────────────────────────
+   3. RESPONSIVE SANGAT KECIL (Layar ≤ 480px / HP kecil)
+   ─────────────────────────────────────────────────
+   Breakpoint untuk smartphone kecil (iPhone SE, dll).
+   Rule tambahan di atas breakpoint 768px.
+   ───────────────────────────────────────────────── */
+@media (max-width: 480px) {
+
+  /* ═══════════════════════════════════════════════
+     3a. HEADING — Lebih Kecil Lagi
+     ═══════════════════════════════════════════════ */
+  .container-xxl h4,
+  .container-p-y h4,
+  .content-wrapper h4 {
+    font-size: 0.9375rem !important;  /* 15px */
+  }
+
+  .container-xxl h5,
+  .container-p-y h5 {
+    font-size: 0.8125rem !important;  /* 13px */
+  }
+
+  .container-xxl p.text-muted,
+  .container-p-y p.text-muted {
+    font-size: 0.6875rem !important;  /* 11px */
+  }
+
+  /* ═══════════════════════════════════════════════
+     3b. TOMBOL EXPORT — Stack Vertikal, Proporsional
+     ═══════════════════════════════════════════════
+     Di HP kecil (≤480px), tombol export ditampilkan
+     full-width dan stack vertikal agar mudah ditekan.
+     Icon tetap ditampilkan agar tombol terlihat rapi.
+     ═══════════════════════════════════════════════ */
+
+  /* Export buttons stack vertikal (full width) */
+  .card-header.d-flex.justify-content-between > .d-flex.gap-2 {
+    flex-direction: column !important;
+    gap: 0.35rem !important;
+  }
+
+  /* Tombol export: full width, ukuran proporsional */
+  .card-header.d-flex.justify-content-between > .d-flex.gap-2 > .btn {
+    width: 100% !important;
+    font-size: 0.8125rem !important;  /* 13px — cukup besar untuk dibaca */
+    padding: 0.5rem 0.75rem !important;
+    min-height: 2.25rem !important;   /* tinggi minimum 36px */
+  }
+
+  /* ═══════════════════════════════════════════════
+     3c. TOMBOL CTA HEADER — Extra Compact
+     ═══════════════════════════════════════════════ */
+  .container-xxl > .d-flex.justify-content-between.align-items-center.mb-4 > a.btn,
+  .container-xxl > .d-flex.justify-content-between.mb-4 > a.btn,
+  .container-xxl > .d-flex.justify-content-between.align-items-center.mb-4 > .btn {
+    font-size: 0.6875rem !important;  /* 11px */
+    padding: 0.35rem 0.6rem !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     3d. BADGE — Extra Kecil
+     ═══════════════════════════════════════════════ */
+  .badge {
+    font-size: 0.5625rem !important;  /* 9px */
+    padding: 0.15rem 0.3rem !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     3e. CONTAINER & CARD — Padding Minimal
+     ═══════════════════════════════════════════════ */
+  .container-xxl {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  .card-body {
+    padding: 0.5rem !important;
+  }
+
+  .card-header {
+    padding: 0.5rem 0.6rem !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     3f. TABEL — Font Extra Kecil
+     ═══════════════════════════════════════════════ */
+  .table thead th {
+    font-size: 0.6875rem !important;  /* 11px */
+    padding: 0.3rem 0.4rem !important;
+  }
+
+  .table tbody td {
+    font-size: 0.6875rem !important;  /* 11px */
+    padding: 0.3rem 0.4rem !important;
+  }
+
+  /* ═══════════════════════════════════════════════
+     3g. FORM INPUT & SELECT — Compact
+     ═══════════════════════════════════════════════ */
+  .form-control,
+  .form-select {
+    font-size: 0.75rem !important;    /* 12px */
+    padding: 0.3rem 0.5rem !important;
+  }
+
+  .form-label {
+    font-size: 0.6875rem !important;  /* 11px */
+  }
+}
+
+/*
+* Layout demo
+******************************************************************************/
+
+.layout-demo-wrapper {
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-align: center;
+  align-items: center;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  margin-top: 1.25rem;
+}
+.layout-demo-placeholder img {
+  width: 900px;
+}
+.layout-demo-info {
+  text-align: center;
+  margin-top: 1.25rem;
+}
