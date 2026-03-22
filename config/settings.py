@@ -51,6 +51,10 @@ CSRF_TRUSTED_ORIGINS = [host.strip() for host in os.environ.get("CSRF_TRUSTED_OR
 # Current DJANGO_ENVIRONMENT
 ENVIRONMENT = os.environ.get("DJANGO_ENVIRONMENT", default="local")
 
+# Tandai apakah instalasi ini ADALAH Central License Server itu sendiri.
+# Jika True, SaaSLicenseMiddleware akan di-bypass agar tidak loopback cek ke diri sendiri.
+IS_LICENSE_SERVER = os.environ.get("IS_LICENSE_SERVER", 'False').lower() in ['true', 'yes', '1']
+
 
 # Application definition
 

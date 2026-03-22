@@ -26,6 +26,12 @@ class SaaSLicenseMiddleware:
         return ':'.join(('%012X' % mac)[i:i+2] for i in range(0, 12, 2))
 
     def __call__(self, request):
+        # 0. BYPASS TOTAL: Jika aplikasi ini ADALAH Central License Server,
+        #    jangan pernah cek lisensi ke diri sendiri (mencegah loopback timeout).
+        is_license_server = getattr(settings, 'IS_LICENSE_SERVER', False)
+        if is_license_server:
+            return self.get_response(request)
+        
         path = request.path_info
         
         # 1. Pengecualian Rute: Jangan block static, media, atau endpoint API lisensi itu sendiri (mencegah loopback di server yang sama)
