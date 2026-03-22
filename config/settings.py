@@ -53,7 +53,9 @@ ENVIRONMENT = os.environ.get("DJANGO_ENVIRONMENT", default="local")
 
 # Tandai apakah instalasi ini ADALAH Central License Server itu sendiri.
 # Jika True, SaaSLicenseMiddleware akan di-bypass agar tidak loopback cek ke diri sendiri.
-IS_LICENSE_SERVER = os.environ.get("IS_LICENSE_SERVER", 'False').lower() in ['true', 'yes', '1']
+# Default True karena file settings.py ini HANYA ada di proyek CLS.
+# Untuk SIMKOS/SERPTECH, mereka punya settings.py sendiri TANPA variabel ini.
+IS_LICENSE_SERVER = os.environ.get("IS_LICENSE_SERVER", 'True').lower() in ['true', 'yes', '1']
 
 
 # Application definition
