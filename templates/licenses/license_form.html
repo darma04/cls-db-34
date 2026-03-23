@@ -81,17 +81,26 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label" for="id_duration_days">
-                                    Durasi (Hari)
+                                    Durasi (Hari) <span class="text-danger">*</span>
                                 </label>
                                 {{ form.duration_days }}
-                                <div class="form-text">Masa berlaku lisensi</div>
+                                <div class="form-text">Masa berlaku lisensi sejak diaktifkan</div>
                             </div>
                             <div class="col-md-4">
+                                <label class="form-label" for="id_max_devices">
+                                    <i class="ri-smartphone-line me-1"></i>Maks Perangkat <span class="text-danger">*</span>
+                                </label>
+                                {{ form.max_devices }}
+                                <div class="form-text">Jumlah perangkat yang boleh terikat pada lisensi ini</div>
+                            </div>
+                        </div>
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-6">
                                 <label class="form-label" for="id_registered_domain">
                                     Domain Terdaftar
                                 </label>
                                 {{ form.registered_domain }}
-                                <div class="form-text">Opsional</div>
+                                <div class="form-text">Opsional — domain tempat lisensi diaktifkan</div>
                             </div>
                         </div>
 

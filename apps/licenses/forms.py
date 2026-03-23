@@ -76,6 +76,7 @@ class LicenseKeyForm(forms.ModelForm):
             'duration_days': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'placeholder': '365',
+                'min': '1',
             }),
             'max_devices': forms.NumberInput(attrs={
                 'class': 'form-control',
@@ -90,6 +91,14 @@ class LicenseKeyForm(forms.ModelForm):
                 'placeholder': 'contoh: pt-abadi.erpserver.com (opsional)',
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set initial/default values agar form tidak kosong saat create baru
+        if not self.instance.pk:
+            self.fields['duration_days'].initial = 365
+            self.fields['max_devices'].initial = 1
+            self.fields['status'].initial = 'active'
 
 
 class LicenseKeyUpdateForm(forms.ModelForm):
