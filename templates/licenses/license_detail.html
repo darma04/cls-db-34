@@ -237,9 +237,9 @@
                 <div class="card-header">
                     <h5 class="mb-0"><i class="ri-pulse-line me-2"></i>Status Lisensi</h5>
                 </div>
-                <div class="card-body text-center">
+                <div class="card-body d-flex flex-column align-items-center text-center">
                     {% if license.status == 'active' %}
-                    <div class="avatar avatar-xl mb-3">
+                    <div class="avatar avatar-xl mb-3 mx-auto">
                         <span class="avatar-initial rounded-circle bg-label-success">
                             <i class="ri-shield-check-line ri-36px"></i>
                         </span>
@@ -247,7 +247,7 @@
                     <h4 class="text-success mb-1">AKTIF</h4>
                     <p class="text-muted mb-0">Lisensi berjalan normal</p>
                     {% elif license.status == 'expired' %}
-                    <div class="avatar avatar-xl mb-3">
+                    <div class="avatar avatar-xl mb-3 mx-auto">
                         <span class="avatar-initial rounded-circle bg-label-danger">
                             <i class="ri-timer-line ri-36px"></i>
                         </span>
@@ -255,7 +255,7 @@
                     <h4 class="text-danger mb-1">KADALUARSA</h4>
                     <p class="text-muted mb-0">Lisensi perlu diperpanjang</p>
                     {% else %}
-                    <div class="avatar avatar-xl mb-3">
+                    <div class="avatar avatar-xl mb-3 mx-auto">
                         <span class="avatar-initial rounded-circle bg-label-warning">
                             <i class="ri-close-circle-line ri-36px"></i>
                         </span>
