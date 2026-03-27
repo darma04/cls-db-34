@@ -20,10 +20,10 @@
 <div class="container-xxl flex-grow-1 container-p-y">
     <h4 class="py-3 mb-4"><span class="text-muted fw-light">Pembelian /</span> Daftar Transaksi</h4>
     <div class="row g-3 mb-4">
-        <div class="col-md-3"><div class="card"><div class="card-body text-center"><h3 class="mb-1">{{ total_pembelian }}</h3><small class="text-muted">Total Transaksi</small></div></div></div>
-        <div class="col-md-3"><div class="card"><div class="card-body text-center"><h3 class="mb-1 text-success">{{ total_completed }}</h3><small class="text-muted">Selesai</small></div></div></div>
-        <div class="col-md-3"><div class="card"><div class="card-body text-center"><h3 class="mb-1 text-warning">{{ total_pending }}</h3><small class="text-muted">Pending</small></div></div></div>
-        <div class="col-md-3"><div class="card"><div class="card-body text-center"><h3 class="mb-1 text-primary">Rp {{ total_pendapatan|floatformat:0|intcomma }}</h3><small class="text-muted">Total Pendapatan</small></div></div></div>
+        <div class="col-6 col-lg-3"><div class="card"><div class="card-body text-center"><h3 class="mb-1">{{ total_pembelian }}</h3><small class="text-muted">Total Transaksi</small></div></div></div>
+        <div class="col-6 col-lg-3"><div class="card"><div class="card-body text-center"><h3 class="mb-1 text-success">{{ total_completed }}</h3><small class="text-muted">Selesai</small></div></div></div>
+        <div class="col-6 col-lg-3"><div class="card"><div class="card-body text-center"><h3 class="mb-1 text-warning">{{ total_pending }}</h3><small class="text-muted">Pending</small></div></div></div>
+        <div class="col-6 col-lg-3"><div class="card"><div class="card-body text-center"><h3 class="mb-1 text-primary">Rp {{ total_pendapatan|floatformat:0|intcomma }}</h3><small class="text-muted">Total Pendapatan</small></div></div></div>
     </div>
 
     <!-- Filter Card -->

@@ -116,14 +116,14 @@
                         </div>
                         {% endif %}
 
-                        <div class="d-flex justify-content-between align-items-center mt-4">
-                            <a href="{% url 'licenses_ui:licensekey_list' %}" class="btn btn-label-secondary">
-                                <i class="ri-close-line me-2"></i>Batal
-                            </a>
-                            <button type="submit" class="btn btn-primary">
+                        <div class="d-flex align-items-center mt-4">
+                            <button type="submit" class="btn btn-primary me-2">
                                 <i class="ri-save-line me-2"></i>
                                 {% if is_edit %}Update Lisensi{% else %}Generate Lisensi{% endif %}
                             </button>
+                            <a href="{% url 'licenses_ui:licensekey_list' %}" class="btn btn-label-secondary">
+                                <i class="ri-close-line me-2"></i>Batal
+                            </a>
                         </div>
                     </form>
                 </div>
