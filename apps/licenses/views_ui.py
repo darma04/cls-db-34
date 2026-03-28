@@ -368,3 +368,19 @@ def unlink_device(request, pk):
         "status": "success",
         "message": f"Perangkat {binding.device_name or binding.hardware_id[:16]} berhasil di-unlink."
     })
+
+
+# ==========================================================================
+#  PRINT VIEWS — Cetak Sertifikat Lisensi
+# ==========================================================================
+
+@login_required
+def licensekey_print(request, pk):
+    """View cetak Sertifikat Lisensi — standalone A4, terhubung TemplateCetak jenis 'lisensi'."""
+    from apps.pengaturan.models import TemplateCetak
+    license_obj = get_object_or_404(LicenseKey, pk=pk)
+    template = TemplateCetak.get_template('lisensi')
+    return render(request, 'licenses/licensekey_print.html', {
+        'license': license_obj,
+        'template': template,
+    })

@@ -92,7 +92,9 @@
             <div class="d-flex gap-2">
                 <button class="btn btn-sm btn-label-success" onclick="exportToExcel()"><i class="ri-file-excel-2-line me-1"></i>Export Excel</button>
                 <button class="btn btn-sm btn-label-danger" onclick="exportToPDF()"><i class="ri-file-pdf-line me-1"></i>Export PDF</button>
+                {% if can_create.pembelian %}
                 <a href="{% url 'pembelian:pembelian_create' %}" class="btn btn-primary btn-sm"><i class="ri-add-line me-1"></i>Buat Transaksi</a>
+                {% endif %}
             </div>
         </div>
         <div class="card-datatable table-responsive">
@@ -115,6 +117,25 @@
                                     <a class="dropdown-item" href="{% url 'pembelian:pembelian_detail' p.pk %}">
                                         <i class="ri-eye-line me-2"></i>Detail Transaksi
                                     </a>
+                                    {% if can_view.pembelian %}
+                                    <a class="dropdown-item" href="{% url 'pembelian:pembelian_print' p.pk %}" target="_blank">
+                                        <i class="ri-file-pdf-2-line me-2"></i>Cetak Invoice
+                                    </a>
+                                    {% endif %}
+                                    {% if can_edit.pembelian %}
+                                    <a class="dropdown-item" href="{% url 'pembelian:pembelian_edit' p.pk %}">
+                                        <i class="ri-edit-line me-2"></i>Edit Transaksi
+                                    </a>
+                                    {% endif %}
+                                    {% if can_delete.pembelian %}
+                                    <div class="dropdown-divider"></div>
+                                    <form method="post" action="{% url 'pembelian:pembelian_delete' p.pk %}" onsubmit="return confirm('Yakin ingin menghapus transaksi {{ p.nomor_transaksi }}?')">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="ri-delete-bin-line me-2"></i>Hapus Transaksi
+                                        </button>
+                                    </form>
+                                    {% endif %}
                                 </div>
                             </div>
                         </td>

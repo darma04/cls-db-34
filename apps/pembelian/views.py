@@ -1,7 +1,7 @@
 """
 Views Pembelian Lisensi - CRUD transaksi pembelian.
 """
-from django.shortcuts import redirect, get_object_or_404
+from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, DetailView, CreateView, TemplateView
 from django.http import JsonResponse
@@ -13,6 +13,7 @@ from django.db.models import Sum
 from web_project import TemplateLayout
 from .models import PembelianLisensi, PembelianLisensiItem
 from apps.licenses.models import Product, Client
+from apps.pengaturan.models import TemplateCetak
 
 
 class PembelianListView(LoginRequiredMixin, ListView):
@@ -132,6 +133,62 @@ class PembelianDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
+class PembelianEditView(LoginRequiredMixin, TemplateView):
+    """View edit pembelian lisensi — ubah klien, catatan, dan item."""
+    template_name = 'pembelian/pembelian_edit.html'
+
+    def get_context_data(self, **kwargs):
+        context = TemplateLayout.init(self, super().get_context_data(**kwargs))
+        pembelian = get_object_or_404(PembelianLisensi, pk=self.kwargs['pk'])
+        context['pembelian'] = pembelian
+        context['items'] = pembelian.items.select_related('produk').all()
+        context['klien_list'] = Client.objects.all().order_by('name')
+        context['produk_list'] = Product.objects.all().order_by('name')
+        context['is_edit'] = True
+        return context
+
+    def post(self, request, *args, **kwargs):
+        pembelian = get_object_or_404(PembelianLisensi, pk=self.kwargs['pk'])
+        klien_id = request.POST.get('klien')
+        catatan = request.POST.get('catatan', '')
+        status_val = request.POST.get('status', pembelian.status)
+        produk_ids = request.POST.getlist('produk[]')
+        jumlah_list = request.POST.getlist('jumlah[]')
+        harga_list = request.POST.getlist('harga[]')
+        durasi_list = request.POST.getlist('durasi[]')
+
+        if not klien_id or not produk_ids:
+            messages.error(request, 'Pilih klien dan minimal 1 produk!')
+            return redirect('pembelian:pembelian_edit', pk=pembelian.pk)
+
+        try:
+            with transaction.atomic():
+                klien = Client.objects.get(pk=klien_id)
+                pembelian.klien = klien
+                pembelian.catatan = catatan
+                pembelian.status = status_val
+                pembelian.save()
+
+                # Hapus item lama dan buat ulang
+                pembelian.items.all().delete()
+                for i, produk_id in enumerate(produk_ids):
+                    produk = Product.objects.get(pk=produk_id)
+                    jumlah = int(jumlah_list[i]) if i < len(jumlah_list) else 1
+                    harga = float(harga_list[i]) if i < len(harga_list) else 0
+                    durasi = int(durasi_list[i]) if i < len(durasi_list) else 365
+                    PembelianLisensiItem.objects.create(
+                        pembelian=pembelian, produk=produk,
+                        jumlah=jumlah, harga_satuan=harga, durasi_hari=durasi
+                    )
+                pembelian.update_total()
+
+            messages.success(request, f'Pembelian {pembelian.nomor_transaksi} berhasil diperbarui!')
+            return redirect('pembelian:pembelian_detail', pk=pembelian.pk)
+        except Exception as e:
+            messages.error(request, f'Gagal memperbarui pembelian: {str(e)}')
+            return redirect('pembelian:pembelian_edit', pk=pembelian.pk)
+
+
 @login_required
 def pembelian_update_status(request, pk):
     if request.method == 'POST':
@@ -153,3 +210,17 @@ def pembelian_delete(request, pk):
         pembelian.delete()
         messages.success(request, f'Pembelian {nomor} berhasil dihapus!')
     return redirect('pembelian:pembelian_list')
+
+
+@login_required
+def pembelian_print(request, pk):
+    """View cetak Invoice Pembelian — standalone A4, terhubung TemplateCetak jenis 'invoice'."""
+    pembelian = get_object_or_404(PembelianLisensi, pk=pk)
+    items = pembelian.items.select_related('produk').all()
+    template = TemplateCetak.get_template('invoice')
+    return render(request, 'pembelian/pembelian_print.html', {
+        'pembelian': pembelian,
+        'items': items,
+        'template': template,
+    })
+

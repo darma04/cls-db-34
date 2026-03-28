@@ -20,6 +20,7 @@ urlpatterns = [
     path('keys/', views_ui.LicenseKeyListView.as_view(), name='licensekey_list'),
     path('keys/create/', views_ui.LicenseKeyCreateView.as_view(), name='licensekey_create'),
     path('keys/<int:pk>/', views_ui.LicenseKeyDetailView.as_view(), name='licensekey_detail'),
+    path('keys/<int:pk>/cetak/', views_ui.licensekey_print, name='licensekey_print'),
     path('keys/<int:pk>/update/', views_ui.LicenseKeyUpdateView.as_view(), name='licensekey_update'),
     path('keys/<int:pk>/delete/', views_ui.LicenseKeyDeleteView.as_view(), name='licensekey_delete'),
 

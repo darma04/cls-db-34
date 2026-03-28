@@ -100,7 +100,7 @@ class TemplateCetakListView(LoginRequiredMixin, ListView):
 class TemplateCetakCreateView(LoginRequiredMixin, CreateView):
     model = TemplateCetak
     template_name = 'pengaturan/template_cetak_form.html'
-    fields = ['jenis', 'nama', 'header_nama_perusahaan', 'header_alamat', 'header_telepon', 'header_email', 'header_website', 'footer_ucapan', 'footer_keterangan', 'footer_copyright', 'signature_kiri_label', 'signature_kanan_label', 'tampilkan_logo', 'tampilkan_website', 'aktif']
+    fields = ['jenis', 'nama', 'logo', 'header_nama_perusahaan', 'header_alamat', 'header_telepon', 'header_email', 'header_website', 'footer_ucapan', 'footer_keterangan', 'footer_copyright', 'signature_kiri_label', 'signature_kanan_label', 'tampilkan_logo', 'tampilkan_website', 'aktif']
     success_url = reverse_lazy('pengaturan:template_cetak_list')
 
     def get_context_data(self, **kwargs):
@@ -116,7 +116,7 @@ class TemplateCetakCreateView(LoginRequiredMixin, CreateView):
 class TemplateCetakUpdateView(LoginRequiredMixin, UpdateView):
     model = TemplateCetak
     template_name = 'pengaturan/template_cetak_form.html'
-    fields = ['jenis', 'nama', 'header_nama_perusahaan', 'header_alamat', 'header_telepon', 'header_email', 'header_website', 'footer_ucapan', 'footer_keterangan', 'footer_copyright', 'signature_kiri_label', 'signature_kanan_label', 'tampilkan_logo', 'tampilkan_website', 'aktif']
+    fields = ['jenis', 'nama', 'logo', 'header_nama_perusahaan', 'header_alamat', 'header_telepon', 'header_email', 'header_website', 'footer_ucapan', 'footer_keterangan', 'footer_copyright', 'signature_kiri_label', 'signature_kanan_label', 'tampilkan_logo', 'tampilkan_website', 'aktif']
     success_url = reverse_lazy('pengaturan:template_cetak_list')
 
     def get_context_data(self, **kwargs):

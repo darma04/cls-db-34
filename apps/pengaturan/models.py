@@ -99,6 +99,7 @@ class TemplateCetak(models.Model):
     signature_kanan_label = models.CharField(max_length=50, default="Dibuat Oleh", blank=True, verbose_name="Label Tanda Tangan Kanan")
 
     # Pengaturan Tambahan
+    logo = models.ImageField(upload_to='template_cetak/', blank=True, null=True, verbose_name="Logo Perusahaan", help_text="Upload logo perusahaan. Kosongkan untuk menggunakan logo default.")
     tampilkan_logo = models.BooleanField(default=True, verbose_name="Tampilkan Logo")
     tampilkan_website = models.BooleanField(default=False, verbose_name="Tampilkan Website")
 

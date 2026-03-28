@@ -27,10 +27,19 @@
                     <i class="ri-more-2-line"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
+                    {% if can_view.licenses %}
+                    <li><a class="dropdown-item" href="{% url 'licenses_ui:licensekey_print' license.pk %}" target="_blank">
+                        <i class="ri-file-pdf-2-line me-2"></i>Cetak Sertifikat</a></li>
+                    {% endif %}
+                    {% if can_edit.licenses %}
                     <li><a class="dropdown-item" href="{% url 'licenses_ui:licensekey_update' license.pk %}">
                         <i class="ri-edit-line me-2"></i>Edit Lisensi</a></li>
+                    {% endif %}
+                    {% if can_delete.licenses %}
+                    <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item text-danger" href="{% url 'licenses_ui:licensekey_delete' license.pk %}">
                         <i class="ri-delete-bin-line me-2"></i>Hapus Lisensi</a></li>
+                    {% endif %}
                 </ul>
             </div>
             <a href="{% url 'licenses_ui:licensekey_list' %}" class="btn btn-label-secondary">
@@ -290,6 +299,21 @@
                     </small>
                 </div>
             </div>
+
+            <!-- Cetak Sertifikat Card -->
+            {% if can_view.licenses %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="ri-printer-line me-2"></i>Cetak Dokumen</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'licenses_ui:licensekey_print' license.pk %}" target="_blank" class="btn btn-primary w-100 mb-2">
+                        <i class="ri-file-pdf-2-line me-1"></i>Cetak Sertifikat Lisensi
+                    </a>
+                    <small class="text-muted d-block text-center">Buka halaman cetak sertifikat A4</small>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Timeline Card -->
             <div class="card">

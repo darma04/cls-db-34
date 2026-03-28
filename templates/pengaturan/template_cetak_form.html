@@ -60,6 +60,20 @@
                                 <h5 class="card-title">Header Perusahaan</h5>
                                 <hr>
                             </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Logo Perusahaan</label>
+                                {{ form.logo }}
+                                {% if form.logo.errors %}
+                                <div class="invalid-feedback d-block">{{ form.logo.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted d-block mt-1">Upload logo (JPG/PNG, max 2MB). Kosongkan untuk logo default.</small>
+                                {% if form.instance.logo %}
+                                <div class="mt-2">
+                                    <img src="{{ form.instance.logo.url }}" alt="Logo Preview" style="max-height: 60px; border: 1px solid #ddd; padding: 4px; border-radius: 4px;">
+                                    <span class="text-muted ms-2">Logo saat ini</span>
+                                </div>
+                                {% endif %}
+                            </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Nama Perusahaan <span class="text-danger">*</span></label>
                                 {{ form.header_nama_perusahaan }}
