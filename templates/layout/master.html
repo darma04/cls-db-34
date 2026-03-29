@@ -24,9 +24,11 @@
     <link rel="canonical" href="{% get_theme_variables 'product_page' %}">
     <!-- Favicon (dinamis dari Pengaturan Sistem) -->
     {% if system_favicon_url %}
-    <link rel="shortcut icon" type="image/x-icon" href="{{ system_favicon_url }}" />
+    <link rel="icon" type="image/png" href="{{ system_favicon_url }}" />
+    <link rel="shortcut icon" href="{{ system_favicon_url }}" />
     {% else %}
-    <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/favicon/favicon.ico' %}" />
+    <link rel="icon" type="image/png" href="{% static 'img/favicon/logo-default.png' %}" />
+    <link rel="shortcut icon" href="{% static 'img/favicon/logo-default.png' %}" />
     {% endif %}
 
     <!-- Include the styles partial -->

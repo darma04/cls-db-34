@@ -141,7 +141,7 @@ function exportTableToPDF(tableId, filename, title, orientation = 'landscape') {
         }
 
         // ─── AMBIL HEADER TABEL ───
-        // Format header: teks putih dengan background ungu (#696CFF = warna primer tema)
+        // Format header: teks putih dengan background ungu (#52d123 = warna primer tema)
         const headers = [];
         const headerRow = table.querySelector('thead tr');
         if (headerRow) {
@@ -149,7 +149,7 @@ function exportTableToPDF(tableId, filename, title, orientation = 'landscape') {
                 headers.push({
                     text: th.textContent.trim(),
                     style: 'tableHeader',           // Referensi ke style di bawah
-                    fillColor: '#696CFF',           // Warna background header (ungu/primary)
+                    fillColor: '#52d123',           // Warna background header (ungu/primary)
                     color: '#FFFFFF',               // Warna teks (putih)
                     bold: true                      // Tebal
                 });
@@ -209,7 +209,7 @@ function exportTableToPDF(tableId, filename, title, orientation = 'landscape') {
                     layout: {
                         // Warna latar baris: header ungu, baris genap abu-abu
                         fillColor: function (rowIndex) {
-                            return (rowIndex === 0) ? '#696CFF' : ((rowIndex % 2 === 0) ? '#F5F5F9' : null);
+                            return (rowIndex === 0) ? '#52d123' : ((rowIndex % 2 === 0) ? '#F5F5F9' : null);
                         },
                         // Garis tabel: tipis (0.5pt) dengan warna abu-abu terang
                         hLineWidth: function () { return 0.5; },

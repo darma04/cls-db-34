@@ -135,7 +135,7 @@ function downloadTemplate(format) {
         html += '<table border="1">';
         
         // Header row dengan styling
-        html += '<thead><tr style="background-color: #696CFF; color: #FFFFFF; font-weight: bold;">';
+        html += '<thead><tr style="background-color: #52d123; color: #FFFFFF; font-weight: bold;">';
         header.forEach(h => html += `<th>${h}</th>`);
         html += '</tr></thead>';
         
@@ -192,7 +192,7 @@ $(document).ready(function() {
                         title: 'Import Berhasil!',
                         html: response.message,
                         confirmButtonText: 'OK',
-                        confirmButtonColor: '#696cff'
+                        confirmButtonColor: '#52d123'
                     }).then(() => {
                         // Reset form
                         $('form[enctype="multipart/form-data"]')[0].reset();
@@ -203,7 +203,7 @@ $(document).ready(function() {
                         title: 'Import Gagal!',
                         html: response.message,
                         confirmButtonText: 'OK',
-                        confirmButtonColor: '#696cff'
+                        confirmButtonColor: '#52d123'
                     });
                 }
             },
@@ -216,7 +216,7 @@ $(document).ready(function() {
                     title: 'Terjadi Kesalahan!',
                     text: 'Gagal mengupload file. Silakan coba lagi.',
                     confirmButtonText: 'OK',
-                    confirmButtonColor: '#696cff'
+                    confirmButtonColor: '#52d123'
                 });
             }
         });

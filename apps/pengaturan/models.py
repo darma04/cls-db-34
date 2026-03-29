@@ -9,7 +9,7 @@ from django.conf import settings
 
 class PengaturanPerusahaan(models.Model):
     """Pengaturan perusahaan - Singleton pattern."""
-    nama_perusahaan = models.CharField(max_length=200, default='SINTSGROUP', verbose_name="Nama Perusahaan")
+    nama_perusahaan = models.CharField(max_length=200, default='CLS', verbose_name="Nama Perusahaan")
     alamat = models.TextField(blank=True, verbose_name="Alamat")
     telepon = models.CharField(max_length=50, blank=True, verbose_name="Telepon")
     email = models.EmailField(blank=True, verbose_name="Email")
@@ -20,7 +20,7 @@ class PengaturanPerusahaan(models.Model):
     pajak_default = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Default Pajak (%)")
 
     # System Settings
-    system_title = models.CharField(max_length=200, blank=True, default='SINTSGROUP License Server', verbose_name="Judul Sistem")
+    system_title = models.CharField(max_length=200, blank=True, default='CLS', verbose_name="Judul Sistem")
     system_keywords = models.CharField(max_length=500, blank=True, verbose_name="Keywords (SEO)")
     system_description = models.TextField(blank=True, verbose_name="Deskripsi Sistem")
     system_logo = models.ImageField(upload_to='pengaturan/', blank=True, null=True, verbose_name="Logo Sistem")
@@ -83,7 +83,7 @@ class TemplateCetak(models.Model):
     jenis = models.CharField(max_length=30, choices=JENIS_CHOICES, unique=True, verbose_name="Jenis Template")
 
     # Informasi Header Dokumen
-    header_nama_perusahaan = models.CharField(max_length=200, default="SINTSGROUP", verbose_name="Nama Perusahaan")
+    header_nama_perusahaan = models.CharField(max_length=200, default="CLS", verbose_name="Nama Perusahaan")
     header_alamat = models.TextField(default="Jl. Contoh Alamat No. 123", blank=True, verbose_name="Alamat")
     header_telepon = models.CharField(max_length=50, default="(021) 1234-5678", blank=True, verbose_name="Telepon")
     header_email = models.EmailField(default="info@cls.com", blank=True, verbose_name="Email")
@@ -92,7 +92,7 @@ class TemplateCetak(models.Model):
     # Informasi Footer Dokumen
     footer_ucapan = models.CharField(max_length=200, default="Terima kasih atas kepercayaan Anda!", blank=True, verbose_name="Ucapan Terima Kasih")
     footer_keterangan = models.CharField(max_length=200, default="Dokumen ini dicetak secara otomatis.", blank=True, verbose_name="Keterangan Footer")
-    footer_copyright = models.CharField(max_length=300, default="© 2026 SINTSGROUP", blank=True, verbose_name="Footer Copyright")
+    footer_copyright = models.CharField(max_length=300, default="© 2026 CLS", blank=True, verbose_name="Footer Copyright")
 
     # Label Tanda Tangan
     signature_kiri_label = models.CharField(max_length=50, default="Disetujui Oleh", blank=True, verbose_name="Label Tanda Tangan Kiri")
@@ -149,27 +149,27 @@ class TemplateCetak(models.Model):
                 'signature_kiri_label': '-',
                 'signature_kanan_label': '-',
                 'footer_ucapan': '',
-                'footer_keterangan': 'Diekspor dari SINTSGROUP License Server.',
-                'footer_copyright': '© 2026 SINTSGROUP',
+                'footer_keterangan': 'Diekspor dari CLS.',
+                'footer_copyright': '© 2026 CLS',
             },
             'export_pdf': {
                 'nama': 'Template Export PDF',
                 'signature_kiri_label': '-',
                 'signature_kanan_label': '-',
                 'footer_ucapan': '',
-                'footer_keterangan': 'Diekspor dari SINTSGROUP License Server.',
-                'footer_copyright': '© 2026 SINTSGROUP',
+                'footer_keterangan': 'Diekspor dari CLS.',
+                'footer_copyright': '© 2026 CLS',
             },
         }
 
         base_defaults = {
-            'header_nama_perusahaan': 'SINTSGROUP',
+            'header_nama_perusahaan': 'CLS',
             'header_alamat': 'Jl. Contoh Alamat No. 123',
             'header_telepon': '(021) 1234-5678',
             'header_email': 'info@cls.com',
             'footer_ucapan': 'Terima kasih atas kepercayaan Anda!',
             'footer_keterangan': 'Dokumen ini dicetak secara otomatis.',
-            'footer_copyright': '© 2026 SINTSGROUP',
+            'footer_copyright': '© 2026 CLS',
         }
 
         base_defaults.update(defaults_map.get(jenis, {'nama': f'Template {jenis}'}))

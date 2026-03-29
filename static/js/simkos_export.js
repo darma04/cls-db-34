@@ -284,7 +284,7 @@ var SimkosExport = (function () {
                 + '<style>table{border-collapse:collapse;} th,td{font-family:Arial,sans-serif;font-size:9pt;}'
                 + '.kop-judul{font-size:14pt;font-weight:bold;color:#5F61E6;}'
                 + '.kop-info{font-size:9pt;color:#697A8D;}'
-                + '.th-header{background-color:#696CFF;color:#FFFFFF;font-weight:bold;padding:6px;}'
+                + '.th-header{background-color:#52d123;color:#FFFFFF;font-weight:bold;padding:6px;}'
                 + '.td-data{padding:4px 6px;}'
                 + '.td-summary{background-color:#EEF0FF;font-weight:bold;padding:4px 6px;color:#4B4EE6;}'
                 + '.td-label{background-color:#EEF0FF;font-weight:bold;padding:4px 6px;color:#5F61E6;}'
@@ -312,7 +312,7 @@ var SimkosExport = (function () {
             // Header
             html += '<thead><tr>';
             visibleColumns.forEach(function (col) {
-                html += '<th style="background-color:#696CFF;color:#FFFFFF;font-weight:bold;padding:6px;white-space:nowrap;border:1px solid #DBDADE;">' + col.text + '</th>';
+                html += '<th style="background-color:#52d123;color:#FFFFFF;font-weight:bold;padding:6px;white-space:nowrap;border:1px solid #DBDADE;">' + col.text + '</th>';
             });
             html += '</tr></thead><tbody>';
 
@@ -402,7 +402,7 @@ var SimkosExport = (function () {
                 return {
                     text: col.text,
                     style: 'tableHeader',
-                    fillColor: '#696CFF',
+                    fillColor: '#52d123',
                     color: '#FFFFFF',
                     bold: true,
                     alignment: 'center'
@@ -466,7 +466,7 @@ var SimkosExport = (function () {
                         layout: {
                             hLineWidth: function (i, node) { return (i === node.table.body.length) ? 1 : 0; },
                             vLineWidth: function () { return 0; },
-                            hLineColor: function () { return '#696CFF'; }
+                            hLineColor: function () { return '#52d123'; }
                         }
                     };
                 },
@@ -487,7 +487,7 @@ var SimkosExport = (function () {
                         },
                         layout: {
                             fillColor: function (rowIndex) {
-                                if (rowIndex === 0) return '#696CFF';            // Header biru
+                                if (rowIndex === 0) return '#52d123';            // Header biru
                                 if (rowIndex === bodyLength - 1) return '#EEF0FF'; // Ringkasan biru muda
                                 return (rowIndex % 2 === 0) ? '#F5F5F9' : null;    // Zebra stripe
                             },

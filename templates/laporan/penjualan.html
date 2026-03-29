@@ -591,7 +591,7 @@
         if (!table) { alert('Tabel tidak ditemukan!'); return; }
 
         var html = '<table border="1">';
-        html += '<thead><tr style="background-color: #696CFF; color: #FFFFFF; font-weight: bold;">';
+        html += '<thead><tr style="background-color: #52d123; color: #FFFFFF; font-weight: bold;">';
 
         var headerRow = table.querySelector('thead tr');
         var totalCols = headerRow ? headerRow.querySelectorAll('th').length : 0;
@@ -666,7 +666,7 @@
                     headers.push({
                         text: th.textContent.trim(),
                         style: 'tableHeader',
-                        fillColor: '#696CFF',
+                        fillColor: '#52d123',
                         color: '#FFFFFF',
                         bold: true
                     });
@@ -735,7 +735,7 @@
                 {
                     table: { headerRows: 1, widths: Array(headers.length).fill('auto'), body: body },
                     layout: {
-                        fillColor: function(rowIndex) { return (rowIndex === 0) ? '#696CFF' : ((rowIndex % 2 === 0) ? '#F5F5F9' : null); },
+                        fillColor: function(rowIndex) { return (rowIndex === 0) ? '#52d123' : ((rowIndex % 2 === 0) ? '#F5F5F9' : null); },
                         hLineWidth: function() { return 0.5; }, vLineWidth: function() { return 0.5; },
                         hLineColor: function() { return '#DBDADE'; }, vLineColor: function() { return '#DBDADE'; }
                     }

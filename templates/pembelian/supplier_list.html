@@ -291,15 +291,15 @@
     }
 
     .dataTables_wrapper .dataTables_paginate .paginate_button.current {
-        background: #696cff !important;
+        background: #52d123 !important;
         color: white !important;
         border: none
     }
 
     .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.disabled) {
-        background: rgba(105, 108, 255, 0.08) !important;
+        background: rgba(82, 209, 35, 0.08) !important;
         border: none;
-        color: #696cff !important
+        color: #52d123 !important
     }
 
     .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
@@ -388,7 +388,7 @@
 
         // Buat tabel HTML untuk Excel (format .xls)
         let html = '<table border="1">';
-        html += '<thead><tr style="background-color: #696CFF; color: #FFFFFF; font-weight: bold;">';
+        html += '<thead><tr style="background-color: #52d123; color: #FFFFFF; font-weight: bold;">';
 
         const headerRow = table.querySelector('thead tr');
         if (headerRow) {
@@ -439,7 +439,7 @@
         if (headerRow) {
             headerRow.querySelectorAll('th').forEach((th, index) => {
                 if (index < headerRow.querySelectorAll('th').length - 1) {
-                    headers.push({ text: th.textContent.trim(), style: 'tableHeader', fillColor: '#696CFF', color: '#FFFFFF', bold: true });
+                    headers.push({ text: th.textContent.trim(), style: 'tableHeader', fillColor: '#52d123', color: '#FFFFFF', bold: true });
                 }
             });
         }
@@ -472,7 +472,7 @@
             content: [
                 { text: 'DAFTAR SUPPLIER', style: 'documentTitle', margin: [0, 0, 0, 10] },
                 { text: 'Tanggal: ' + new Date().toLocaleDateString('id-ID'), style: 'dateText', margin: [0, 0, 0, 15] },
-                { table: { headerRows: 1, widths: ['auto', '*', 'auto', 'auto', '*', 'auto'], body: body }, layout: { fillColor: (rowIndex) => (rowIndex === 0) ? '#696CFF' : ((rowIndex % 2 === 0) ? '#F5F5F9' : null) } }
+                { table: { headerRows: 1, widths: ['auto', '*', 'auto', 'auto', '*', 'auto'], body: body }, layout: { fillColor: (rowIndex) => (rowIndex === 0) ? '#52d123' : ((rowIndex % 2 === 0) ? '#F5F5F9' : null) } }
             ],
             footer: (currentPage, pageCount) => ({ margin: [40, 10], columns: [{ text: 'Dicetak: ' + new Date().toLocaleString('id-ID'), fontSize: 8 }, { text: 'Hal ' + currentPage + '/' + pageCount, alignment: 'right', fontSize: 8 }] }),
             styles: { companyName: { fontSize: 14, bold: true, color: '#5F61E6' }, documentTitle: { fontSize: 16, bold: true, color: '#5F61E6' }, dateText: { fontSize: 10, color: '#697A8D' }, tableHeader: { bold: true, fontSize: 9 } },

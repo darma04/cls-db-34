@@ -51,14 +51,14 @@
       color: #697a8d;
   }
   .dataTables_wrapper .dataTables_paginate .paginate_button.current {
-      background: #696cff !important;
+      background: #52d123 !important;
       color: white !important;
       border: none;
   }
   .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.disabled) {
-      background: rgba(105, 108, 255, 0.08) !important;
+      background: rgba(82, 209, 35, 0.08) !important;
       border: none;
-      color: #696cff !important;
+      color: #52d123 !important;
   }
   .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
       color: #c7cdd4 !important;
@@ -313,12 +313,12 @@
                         </div>
                         <div>
                             <h5 class="mb-1">Backup Semua Data</h5>
-                            <p class="text-muted mb-0 small">Download seluruh database ke file JSON</p>
+                            <p class="text-muted mb-0 small">Download seluruh data + gambar ke file ZIP</p>
                         </div>
                     </div>
                     <p class="mb-3">
-                        Buat cadangan <strong>seluruh database</strong> termasuk produk, klien, lisensi, pembelian, pengaturan, dan user. 
-                        File backup bisa digunakan untuk restore di kemudian hari.
+                        Buat cadangan <strong>seluruh database</strong> dan file media (logo, avatar, dll). 
+                        File backup berformat ZIP bisa digunakan untuk restore di kemudian hari.
                     </p>
                     <form method="post" action="{% url 'pengaturan:backup_data' %}" id="backupForm">
                         {% csrf_token %}
@@ -349,7 +349,7 @@
                         </div>
                     </div>
                     <p class="mb-3">
-                        Pulihkan <strong>seluruh data</strong> (Produk, Klien, Lisensi, Pembelian, user) dari file backup JSON/SQLite. 
+                        Pulihkan <strong>seluruh data</strong> dari file backup ZIP (data + gambar) atau SQLite (data saja). 
                         Data lama akan ditimpa dengan data dari file backup.
                     </p>
                     <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#restoreModal">
@@ -378,8 +378,8 @@
                         </div>
                     </div>
                     <p class="mb-3">
-                        Hapus <strong class="text-danger">SEMUA DATA</strong> di database (Produk, Klien, Lisensi, Pembelian, Log). 
-                        Hanya akun Anda yang dipertahankan.
+                        Hapus <strong class="text-danger">SEMUA DATA</strong> di database dan file media (Produk, Klien, Lisensi, Pembelian, Log, Gambar). 
+                        Hanya akun Anda dan logo default yang dipertahankan.
                     </p>
                     <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#resetModal">
                         <i class="ri-delete-bin-7-line me-1"></i>
@@ -582,9 +582,9 @@
                         Pastikan Anda sudah membuat backup terlebih dahulu.
                     </div>
                     <div class="mb-3">
-                        <label for="backup_file" class="form-label">Pilih File Backup (.json)</label>
-                        <input type="file" class="form-control" id="backup_file" name="backup_file" accept=".json" required>
-                        <div class="form-text">Hanya file .json yang diperbolehkan</div>
+                        <label for="backup_file" class="form-label">Pilih File Backup (.zip atau .sqlite3)</label>
+                        <input type="file" class="form-control" id="backup_file" name="backup_file" accept=".zip,.sqlite3,.db" required>
+                        <div class="form-text">File .zip (data + gambar) atau .sqlite3 (data saja, backward compatible)</div>
                     </div>
                     <div id="fileInfo" class="d-none">
                         <div class="d-flex align-items-center p-2 bg-light rounded">
@@ -634,6 +634,7 @@
                         <li><i class="ri-close-circle-line text-danger me-1"></i> Template Cetak</li>
                         <li><i class="ri-close-circle-line text-danger me-1"></i> Activity Log, Log Notifikasi, Riwayat Backup</li>
                         <li><i class="ri-close-circle-line text-danger me-1"></i> Semua User (kecuali akun Anda)</li>
+                        <li><i class="ri-close-circle-line text-danger me-1"></i> File media/gambar (kecuali logo default)</li>
                     </ul>
                     <p>Yang <strong class="text-success">DIPERTAHANKAN</strong>:</p>
                     <ul class="list-unstyled mb-3">

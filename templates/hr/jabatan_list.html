@@ -288,8 +288,8 @@
     .dataTables_wrapper .dataTables_filter input { border: 1px solid #d9dee3; border-radius: 0.375rem; padding: 0.4375rem 0.875rem; }
     .dataTables_wrapper .dataTables_length select { border: 1px solid #d9dee3; border-radius: 0.375rem; padding: 0.4375rem 2rem 0.4375rem 0.875rem; }
     .dataTables_wrapper .dataTables_paginate .paginate_button { padding: 0.438rem 0.875rem; border-radius: 0.375rem; margin: 0 0.125rem; border: none; background: transparent; color: #697a8d; }
-    .dataTables_wrapper .dataTables_paginate .paginate_button.current { background: #696cff !important; color: white !important; border: none; }
-    .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.disabled) { background: rgba(105, 108, 255, 0.08) !important; border: none; color: #696cff !important; }
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current { background: #52d123 !important; color: white !important; border: none; }
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.disabled) { background: rgba(82, 209, 35, 0.08) !important; border: none; color: #52d123 !important; }
     .card-datatable { padding-bottom: 0; }
     @media (max-width: 768px) { .card-datatable { overflow-x: hidden !important; } .datatables-jabatan { min-width: 900px !important; } }
 </style>
@@ -353,7 +353,7 @@ function deselectAllColumns() {
 function exportToExcel() {
     const headers = ['Kode', 'Nama Jabatan', 'Departemen', 'Level', 'Gaji Pokok', 'Status'];
     let html = '<html><head><meta charset="utf-8"></head><body><table border="1">';
-    html += '<thead><tr style="background-color: #696CFF; color: white; font-weight: bold;">';
+    html += '<thead><tr style="background-color: #52d123; color: white; font-weight: bold;">';
     headers.forEach(h => html += `<th>${h}</th>`);
     html += '</tr></thead><tbody>';
 
@@ -380,12 +380,12 @@ function exportToExcel() {
 function exportToPDF() {
     if (typeof pdfMake === 'undefined') return alert('pdfMake tidak tersedia!');
     const headers = [
-        { text: 'Kode', style: 'th', fillColor: '#696CFF', color: '#fff' },
-        { text: 'Nama', style: 'th', fillColor: '#696CFF', color: '#fff' },
-        { text: 'Departemen', style: 'th', fillColor: '#696CFF', color: '#fff' },
-        { text: 'Level', style: 'th', fillColor: '#696CFF', color: '#fff' },
-        { text: 'Gaji Pokok', style: 'th', fillColor: '#696CFF', color: '#fff' },
-        { text: 'Status', style: 'th', fillColor: '#696CFF', color: '#fff' }
+        { text: 'Kode', style: 'th', fillColor: '#52d123', color: '#fff' },
+        { text: 'Nama', style: 'th', fillColor: '#52d123', color: '#fff' },
+        { text: 'Departemen', style: 'th', fillColor: '#52d123', color: '#fff' },
+        { text: 'Level', style: 'th', fillColor: '#52d123', color: '#fff' },
+        { text: 'Gaji Pokok', style: 'th', fillColor: '#52d123', color: '#fff' },
+        { text: 'Status', style: 'th', fillColor: '#52d123', color: '#fff' }
     ];
     const body = [headers];
     document.querySelectorAll('#jabatanTable tbody tr').forEach(tr => {

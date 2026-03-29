@@ -178,47 +178,133 @@ class ManajemenDataView(LoginRequiredMixin, TemplateView):
 def backup_data(request):
     if request.method == 'POST':
         import datetime
+        import zipfile
+        import tempfile
         db_path = settings.DATABASES['default']['NAME']
+        media_root = settings.MEDIA_ROOT
         backup_dir = os.path.join(settings.BASE_DIR, 'backups')
         os.makedirs(backup_dir, exist_ok=True)
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_filename = f"cls_backup_{timestamp}.sqlite3"
-        backup_path = os.path.join(backup_dir, backup_filename)
+        backup_filename = f"cls_backup_{timestamp}.zip"
         try:
-            shutil.copy2(str(db_path), backup_path)
-            file_size = os.path.getsize(backup_path)
+            # Buat ZIP berisi database + media
+            tmp_fd, tmp_path = tempfile.mkstemp(suffix='.zip')
+            os.close(tmp_fd)
+            with zipfile.ZipFile(tmp_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+                # Masukkan database SQLite
+                if os.path.exists(str(db_path)):
+                    zf.write(str(db_path), 'database.sqlite3')
+                # Masukkan seluruh folder media
+                media_root_str = str(media_root)
+                if os.path.exists(media_root_str):
+                    for root, dirs, files in os.walk(media_root_str):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            arcname = os.path.join('media', os.path.relpath(file_path, media_root_str))
+                            zf.write(file_path, arcname)
+
+            file_size = os.path.getsize(tmp_path)
+            # Simpan salinan di folder backups
+            backup_path = os.path.join(backup_dir, backup_filename)
+            shutil.copy2(tmp_path, backup_path)
+
             BackupHistory.objects.create(
                 aksi='backup', nama_file=backup_filename,
                 ukuran_file=file_size, user=request.user,
-                catatan=f"Backup database oleh {request.user.username}"
+                catatan=f"Backup database + media oleh {request.user.username}"
             )
-            response = HttpResponse(open(backup_path, 'rb').read(), content_type='application/octet-stream')
+            with open(tmp_path, 'rb') as f:
+                response = HttpResponse(f.read(), content_type='application/zip')
             response['Content-Disposition'] = f'attachment; filename="{backup_filename}"'
+            os.unlink(tmp_path)
             return response
         except Exception as e:
+            if 'tmp_path' in locals() and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
             messages.error(request, f'Gagal membuat backup: {str(e)}')
     return redirect('pengaturan:manajemen_data')
+
 
 
 @login_required
 def restore_data(request):
     if request.method == 'POST' and request.FILES.get('backup_file'):
         import datetime
+        import zipfile
+        import tempfile
         db_path = settings.DATABASES['default']['NAME']
+        media_root = str(settings.MEDIA_ROOT)
         backup_file = request.FILES['backup_file']
         backup_dir = os.path.join(settings.BASE_DIR, 'backups')
         os.makedirs(backup_dir, exist_ok=True)
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         pre_restore = f"pre_restore_{timestamp}.sqlite3"
+        filename = backup_file.name.lower()
+
         try:
+            # Backup database sebelum restore
             shutil.copy2(str(db_path), os.path.join(backup_dir, pre_restore))
-            with open(str(db_path), 'wb') as f:
-                for chunk in backup_file.chunks():
-                    f.write(chunk)
+
+            if filename.endswith('.zip'):
+                # === RESTORE DARI ZIP (database + media) ===
+                tmp_fd, tmp_path = tempfile.mkstemp(suffix='.zip')
+                os.close(tmp_fd)
+                with open(tmp_path, 'wb') as f:
+                    for chunk in backup_file.chunks():
+                        f.write(chunk)
+
+                tmp_extract = tempfile.mkdtemp()
+                with zipfile.ZipFile(tmp_path, 'r') as zf:
+                    zf.extractall(tmp_extract)
+
+                # Restore database
+                db_in_zip = os.path.join(tmp_extract, 'database.sqlite3')
+                if os.path.exists(db_in_zip):
+                    shutil.copy2(db_in_zip, str(db_path))
+                else:
+                    raise Exception("File database.sqlite3 tidak ditemukan dalam ZIP")
+
+                # Restore media
+                media_in_zip = os.path.join(tmp_extract, 'media')
+                if os.path.exists(media_in_zip):
+                    # Hapus media lama
+                    if os.path.exists(media_root):
+                        for item_name in os.listdir(media_root):
+                            item_path = os.path.join(media_root, item_name)
+                            if os.path.isdir(item_path):
+                                shutil.rmtree(item_path)
+                            else:
+                                os.unlink(item_path)
+                    else:
+                        os.makedirs(media_root, exist_ok=True)
+                    # Copy media dari backup
+                    for item_name in os.listdir(media_in_zip):
+                        src = os.path.join(media_in_zip, item_name)
+                        dst = os.path.join(media_root, item_name)
+                        if os.path.isdir(src):
+                            shutil.copytree(src, dst, dirs_exist_ok=True)
+                        else:
+                            shutil.copy2(src, dst)
+
+                # Cleanup temp files
+                shutil.rmtree(tmp_extract, ignore_errors=True)
+                os.unlink(tmp_path)
+                restore_note = f"Restore ZIP (database + media) oleh {request.user.username}. Pre-restore: {pre_restore}"
+
+            elif filename.endswith('.sqlite3') or filename.endswith('.db'):
+                # === BACKWARD COMPATIBLE: RESTORE DARI FILE SQLITE3 ===
+                with open(str(db_path), 'wb') as f:
+                    for chunk in backup_file.chunks():
+                        f.write(chunk)
+                restore_note = f"Restore SQLite oleh {request.user.username}. Pre-restore: {pre_restore}"
+            else:
+                messages.error(request, 'Format file tidak didukung. Gunakan file .zip atau .sqlite3')
+                return redirect('pengaturan:manajemen_data')
+
             BackupHistory.objects.create(
                 aksi='restore', nama_file=backup_file.name,
                 ukuran_file=backup_file.size, user=request.user,
-                catatan=f"Restore oleh {request.user.username}. Pre-restore: {pre_restore}"
+                catatan=restore_note
             )
             messages.success(request, 'Database berhasil di-restore! Silakan restart server.')
         except Exception as e:
@@ -234,17 +320,39 @@ def reset_data(request):
             try:
                 from apps.licenses.models import Product, Client, LicenseKey
                 from apps.pembelian.models import PembelianLisensi, PembelianLisensiItem
+                media_root = str(settings.MEDIA_ROOT)
+                media_deleted = 0
+
                 with transaction.atomic():
                     PembelianLisensiItem.objects.all().delete()
                     PembelianLisensi.objects.all().delete()
                     LicenseKey.objects.all().delete()
                     Client.objects.all().delete()
                     Product.objects.all().delete()
-                    BackupHistory.objects.create(
-                        aksi='reset', user=request.user,
-                        catatan=f"Reset data oleh {request.user.username}"
-                    )
-                messages.success(request, 'Semua data berhasil direset!')
+
+                # Hapus file media kecuali folder system/
+                protected_folders = {'system'}
+                if os.path.exists(media_root):
+                    for item_name in os.listdir(media_root):
+                        if item_name in protected_folders:
+                            continue
+                        item_path = os.path.join(media_root, item_name)
+                        try:
+                            if os.path.isdir(item_path):
+                                file_count = sum(len(f) for _, _, f in os.walk(item_path))
+                                media_deleted += file_count
+                                shutil.rmtree(item_path)
+                            else:
+                                media_deleted += 1
+                                os.unlink(item_path)
+                        except Exception:
+                            pass
+
+                BackupHistory.objects.create(
+                    aksi='reset', user=request.user,
+                    catatan=f"Reset data oleh {request.user.username}. {media_deleted} file media dihapus."
+                )
+                messages.success(request, f'Semua data berhasil direset! ({media_deleted} file media dihapus)')
             except Exception as e:
                 messages.error(request, f'Gagal reset: {str(e)}')
         else:

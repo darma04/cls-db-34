@@ -356,15 +356,15 @@
     }
 
     .dataTables_wrapper .dataTables_paginate .paginate_button.current {
-        background: #696cff !important;
+        background: #52d123 !important;
         color: white !important;
         border: none;
     }
 
     .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.disabled) {
-        background: rgba(105, 108, 255, 0.08) !important;
+        background: rgba(82, 209, 35, 0.08) !important;
         border: none;
-        color: #696cff !important;
+        color: #52d123 !important;
     }
 
     .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
@@ -502,7 +502,7 @@
 
         // Buat tabel HTML untuk Excel (format .xls)
         let html = '<table border="1">';
-        html += '<thead><tr style="background-color: #696CFF; color: #FFFFFF; font-weight: bold;">';
+        html += '<thead><tr style="background-color: #52d123; color: #FFFFFF; font-weight: bold;">';
 
         const headerRow = table.querySelector('thead tr');
         if (headerRow) {
@@ -557,7 +557,7 @@
                     headers.push({
                         text: th.textContent.trim(),
                         style: 'tableHeader',
-                        fillColor: '#696CFF',
+                        fillColor: '#52d123',
                         color: '#FFFFFF',
                         bold: true
                     });
@@ -617,7 +617,7 @@
                 {
                     table: { headerRows: 1, widths: ['auto', 'auto', '*', '*', 'auto', 'auto'], body: body },
                     layout: {
-                        fillColor: (rowIndex) => (rowIndex === 0) ? '#696CFF' : ((rowIndex % 2 === 0) ? '#F5F5F9' : null),
+                        fillColor: (rowIndex) => (rowIndex === 0) ? '#52d123' : ((rowIndex % 2 === 0) ? '#F5F5F9' : null),
                         hLineWidth: () => 0.5, vLineWidth: () => 0.5,
                         hLineColor: () => '#DBDADE', vLineColor: () => '#DBDADE'
                     }
