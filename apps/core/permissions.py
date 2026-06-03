@@ -122,13 +122,37 @@ def has_permission(user, action, module=None, sub_module=None):
             if sub_module:
                 sub_key = (module_normalized, sub_module.lower())
                 if sub_key in perms_cache:
-                    return perms_cache[sub_key].get(perm_field, False)
-                # Jika sub-module tidak ditemukan → fallback ke module level
+                    sub_value = perms_cache[sub_key].get(perm_field, False)
+
+                    # Jika mengecek hak akses BACA (view) pada level Sub Modul,
+                    # wajib mengikuti setelan checkbox Sub Modul secara ketat (jangan fallback)
+                    if perm_field == 'can_view':
+                        return sub_value
+
+                    if sub_value:
+                        return True
+                else:
+                    # Jika tidak ada setelan spesifik di DB untuk sub_module ini,
+                    # dan aksi yang diminta adalah 'view', harus return False mutlak!
+                    if perm_field == 'can_view':
+                        return False
+
+                # Untuk aksi create, edit, delete -> fallback ke parent module
+                # karena UI Edit Role tidak memiliki checkbox aksi mendetail untuk sub modul
 
             # ===== CEK MODULE LEVEL (fallback) =====
             mod_key = (module_normalized, None)
             if mod_key in perms_cache:
                 return perms_cache[mod_key].get(perm_field, False)
+
+            # ===== FALLBACK SUB-MODULE =====
+            # Jika user mengecek level modul, tapi database hanya punya record level sub-modul
+            # (karena checkbox UI hanya ada di level sub-modul), anggap True jika ADA minimal
+            # 1 sub-modul di modul ini yang memiliki permission tersebut.
+            if not sub_module:
+                for (mod, sub), perm_dict in perms_cache.items():
+                    if mod == module_normalized and sub is not None and perm_dict.get(perm_field, False):
+                        return True
 
             # Tidak ada permission record → DITOLAK
             return False
@@ -139,16 +163,54 @@ def has_permission(user, action, module=None, sub_module=None):
     return False
 
 
+def has_exact_submodule_permission(user, action, module, sub_module):
+    """
+    Cek permission sub-module tanpa fallback ke module-level.
+    Dipakai untuk fitur global seperti tombol Refresh Cache.
+    """
+    role = get_user_role(user)
+    if not role:
+        return False
+    if role == 'SUPERUSER':
+        return True
+    if not module or not sub_module:
+        return False
+
+    try:
+        module_normalized = module.replace('-', '_').lower()
+        sub_module_normalized = sub_module.replace('-', '_').lower()
+        action_map = {
+            'add': 'can_create',
+            'create': 'can_create',
+            'read': 'can_view',
+            'view': 'can_view',
+            'edit': 'can_edit',
+            'update': 'can_edit',
+            'write': 'can_edit',
+            'delete': 'can_delete',
+            'del': 'can_delete',
+            'remove': 'can_delete',
+        }
+        perm_field = action_map.get(action)
+        if not perm_field:
+            return False
+        perms_cache = _get_role_permissions_cache(role)
+        return perms_cache.get((module_normalized, sub_module_normalized), {}).get(perm_field, False)
+    except Exception:
+        return False
+
+
 def _get_role_permissions_cache(role):
     """
     Load SEMUA permissions untuk sebuah role dalam 1 query dan cache.
 
     Return: Dictionary {(module, sub_module): {can_view, can_create, can_edit, can_delete}}
-    Cache TTL: 30 detik — balance antara performa dan freshness.
+    Cache TTL: 300 detik dan aman karena key berbasis versi.
     """
     from django.core.cache import cache
+    from apps.core.cache_utils import get_role_permissions_cache_key
 
-    cache_key = f'role_perms_{role}'
+    cache_key = get_role_permissions_cache_key(role)
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -172,7 +234,7 @@ def _get_role_permissions_cache(role):
             'can_delete': p['can_delete'],
         }
 
-    cache.set(cache_key, perms_dict, 30)  # Cache 30 detik
+    cache.set(cache_key, perms_dict, 300)
     return perms_dict
 
 
@@ -234,6 +296,12 @@ def get_all_submodules_from_menu(module):
     import os
     from django.conf import settings
 
+    # Reverse mapping: DB module → menu slug (e.g., 'ai' → 'ai_assistant')
+    MODULE_TO_SLUG = {
+        'user_management': 'users',
+        'ai': 'ai_assistant',
+    }
+
     try:
         # Cache menu data di memori (baca file hanya sekali)
         if _menu_cache is None:
@@ -246,9 +314,12 @@ def get_all_submodules_from_menu(module):
 
         # Cari modul di menu (normalisasi dash dan underscore)
         module_norm = module.lower().replace('-', '_')
+        # Also try the menu slug version if DB module was passed
+        menu_slug_norm = MODULE_TO_SLUG.get(module_norm, module_norm)
+
         for item in _menu_cache.get('menu', []):
             item_slug_norm = item.get('slug', '').lower().replace('-', '_')
-            if item_slug_norm == module_norm and 'submenu' in item:
+            if (item_slug_norm == module_norm or item_slug_norm == menu_slug_norm) and 'submenu' in item:
                 # Ekstrak slug sub-modul dari submenu
                 subs = []
                 for sub_item in item['submenu']:

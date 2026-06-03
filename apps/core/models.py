@@ -71,6 +71,9 @@ class RolePermission(models.Model):
     # ==================== DAFTAR SUB-MODUL ====================
     # Sub-modul per modul — setiap sub-modul = 1 submenu di sidebar
     SUB_MODULE_CHOICES = {
+        'dashboard': [
+            ('refresh_cache', 'Tombol Refresh Cache'),
+        ],
         'licenses': [
             ('produk', 'Data Produk'),
             ('klien', 'Data Klien'),
@@ -86,10 +89,6 @@ class RolePermission(models.Model):
             ('ai_chat', 'Chat AI'),
             ('ai_dashboard', 'Dashboard AI'),
         ],
-        'access_control': [
-            ('roles', 'Roles'),
-            ('permissions', 'Permissions'),
-        ],
         'automation': [
             ('pengaturan_telegram', 'Pengaturan Bot'),
             ('template_pesan', 'Template Pesan'),
@@ -104,31 +103,38 @@ class RolePermission(models.Model):
     }
 
     # ==================== MAPPING SUB-MODULE KE SLUG MENU ====================
+    # PENTING: Slug di sini HARUS cocok dengan bagian SETELAH dash pertama di vertical_menu.json
+    # Contoh: menu slug "licenses-product" → extract_submodule → "product"
+    #         Maka mapping harus: 'produk': 'product'
     SUB_MODULE_TO_SLUG = {
+        # === Dashboard ===
+        'refresh_cache': 'refresh-cache',
         # === Manajemen Lisensi ===
-        'produk': 'produk',
-        'klien': 'klien',
-        'kunci_lisensi': 'kunci-lisensi',
+        # Menu: licenses-product, licenses-client, licenses-keys
+        'produk': 'product',
+        'klien': 'client',
+        'kunci_lisensi': 'keys',
         # === Laporan ===
+        # Menu: laporan-lisensi, laporan-klien, laporan-pendapatan, laporan-keuangan
         'laporan_lisensi': 'lisensi',
         'laporan_klien': 'klien',
         'laporan_pendapatan': 'pendapatan',
         'laporan_keuangan': 'keuangan',
         # === AI Manajemen ===
+        # Menu: ai-chat, ai-dashboard
         'ai_chat': 'chat',
         'ai_dashboard': 'dashboard',
-        # === Access Control ===
-        'roles': 'roles',
-        'permissions': 'permissions',
-        # === Telegram ===
-        'pengaturan_telegram': 'pengaturan',
-        'template_pesan': 'template',
-        'log_notifikasi': 'log',
+        # === Telegram / Automation ===
+        # Menu: automation-settings, automation-templates, automation-logs
+        'pengaturan_telegram': 'settings',
+        'template_pesan': 'templates',
+        'log_notifikasi': 'logs',
         # === Pengaturan ===
+        # Menu: pengaturan-profil, pengaturan-perusahaan, pengaturan-template, pengaturan-data
         'profil': 'profil',
         'perusahaan': 'perusahaan',
-        'template_cetak': 'template-cetak',
-        'manajemen_data': 'manajemen-data',
+        'template_cetak': 'template',
+        'manajemen_data': 'data',
     }
 
     # ==================== REVERSE MAPPING: SLUG → DB CODE ====================

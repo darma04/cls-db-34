@@ -28,7 +28,12 @@
 ==========================================================================
 """
 
-from apps.core.permissions import has_permission, get_user_role, get_accessible_submodules
+from apps.core.permissions import (
+    has_exact_submodule_permission,
+    has_permission,
+    get_user_role,
+    get_accessible_submodules,
+)
 
 
 class PermissionChecker:
@@ -56,6 +61,9 @@ class PermissionChecker:
     # Mapping ini menjembatani perbedaan tersebut.
     SLUG_TO_MODULE = {
         'users': 'user_management',        # Manajemen User: slug 'users' → module 'user_management'
+        'ai_assistant': 'ai',              # AI Manajemen: slug 'ai-assistant' → module 'ai'
+        'access_control': 'access_control', # Access Control: slug 'access-control' → module 'access_control'
+        'activity_log': 'activity_log',    # Log Aktivitas: slug 'activity-log' → module 'activity_log'
     }
 
     def __init__(self, user, action, module=None):
@@ -125,6 +133,14 @@ class AccessibleSubsChecker:
     untuk modul yang sama dalam 1 request.
     """
 
+    # Mapping slug menu → kode modul database (sama dengan PermissionChecker)
+    SLUG_TO_MODULE = {
+        'users': 'user_management',
+        'ai_assistant': 'ai',
+        'access_control': 'access_control',
+        'activity_log': 'activity_log',
+    }
+
     def __init__(self, user):
         """
         Inisialisasi checker.
@@ -151,6 +167,9 @@ class AccessibleSubsChecker:
         """
         # Normalisasi nama modul
         normalized = module.replace('-', '_').lower()
+
+        # Terapkan slug→module mapping jika ada
+        normalized = self.SLUG_TO_MODULE.get(normalized, normalized)
 
         # Cek cache dulu
         if normalized not in self._cache:
@@ -196,6 +215,9 @@ def user_permissions(request):
 
         # Status superuser (untuk kasus khusus di template)
         is_superuser = user_role == 'SUPERUSER'
+        can_show_refresh_cache_button = has_exact_submodule_permission(
+            request.user, 'read', 'dashboard', 'refresh_cache'
+        )
 
         return {
             'user_role': user_role,
@@ -211,6 +233,7 @@ def user_permissions(request):
 
             # Flag superuser
             'is_superuser': is_superuser,
+            'can_show_refresh_cache_button': can_show_refresh_cache_button,
         }
 
     # ==================== USER BELUM LOGIN ====================
@@ -238,4 +261,5 @@ def user_permissions(request):
         'can_manage_roles': False,
         'can_view_logs': False,
         'can_manage_settings': False,
+        'can_show_refresh_cache_button': False,
     }

@@ -23,13 +23,12 @@
         <div class="card-body">
             <form method="get">
             <div class="row g-3">
-                <div class="col-md-3"><label class="form-label">Dari Tanggal</label><input type="text" name="start_date" class="form-control flatpickr-input" id="startDate" value="{{ start_date }}" placeholder="Pilih tanggal"></div>
-                <div class="col-md-3"><label class="form-label">Sampai Tanggal</label><input type="text" name="end_date" class="form-control flatpickr-input" id="endDate" value="{{ end_date }}" placeholder="Pilih tanggal"></div>
-                <div class="col-md-3"><label class="form-label">Klien</label><select name="klien" class="form-select"><option value="">Semua Klien</option>{% for k in klien_list %}<option value="{{ k.id }}" {% if filter_klien == k.id|stringformat:"d" %}selected{% endif %}>{{ k.name }}</option>{% endfor %}</select></div>
-                <div class="col-md-3"></div>
+                <div class="col-12 col-md-6 col-xl-4"><label class="form-label">Dari Tanggal</label><input type="text" name="start_date" class="form-control flatpickr-input" id="startDate" value="{{ start_date }}" placeholder="Pilih tanggal"></div>
+                <div class="col-12 col-md-6 col-xl-4"><label class="form-label">Sampai Tanggal</label><input type="text" name="end_date" class="form-control flatpickr-input" id="endDate" value="{{ end_date }}" placeholder="Pilih tanggal"></div>
+                <div class="col-12 col-md-6 col-xl-4"><label class="form-label">Klien</label><select name="klien" class="form-select"><option value="">Semua Klien</option>{% for k in klien_list %}<option value="{{ k.id }}" {% if filter_klien == k.id|stringformat:"d" %}selected{% endif %}>{{ k.name }}</option>{% endfor %}</select></div>
             </div>
             <div class="row g-3 mt-2 align-items-end">
-                <div class="col-md-3">
+                <div class="col-12 col-md-6 col-xl-4">
                     <label class="form-label">Pilih Kolom</label>
                     <div class="dropdown">
                         <button class="btn btn-label-secondary dropdown-toggle waves-effect w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"><i class="ri-layout-column-line me-1"></i>Pilih Kolom yang Ditampilkan</button>
@@ -49,8 +48,7 @@
                     </div>
                     <small class="text-muted d-block mt-1">Klik untuk memilih kolom</small>
                 </div>
-                <div class="col-md-6"></div>
-                <div class="col-md-3"><div class="d-grid gap-2"><button type="submit" class="btn btn-primary"><i class="ri-filter-3-line me-1"></i>Terapkan Filter</button><a href="{% url 'laporan:pendapatan' %}" class="btn btn-label-secondary"><i class="ri-refresh-line me-1"></i>Reset</a></div></div>
+                <div class="col-12 col-md-6 col-xl-4 ms-xl-auto"><div class="d-grid gap-2"><button type="submit" class="btn btn-primary"><i class="ri-filter-3-line me-1"></i>Terapkan Filter</button><a href="{% url 'laporan:pendapatan' %}" class="btn btn-label-secondary"><i class="ri-refresh-line me-1"></i>Reset</a></div></div>
             </div>
             </form>
         </div>
@@ -62,8 +60,8 @@
             <div class="card h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
-                        <div><p class="text-muted mb-1">Total Pendapatan</p><h4 class="mb-0 text-success">Rp {{ total_pendapatan|floatformat:0|intcomma }}</h4></div>
-                        <div class="avatar"><span class="avatar-initial rounded bg-label-success"><i class="ri-arrow-up-circle-line ri-24px"></i></span></div>
+                        <div><p class="text-muted mb-1">Total Pendapatan</p><h4 class="mb-0 text-success">Rp {{ total_pendapatan|floatformat:0|intcomma }}</h4><small class="text-success"><i class="ri-arrow-up-circle-line"></i> akumulasi pendapatan</small></div>
+                        <div class="avatar"><span class="avatar-initial rounded bg-label-success"><i class="ri-money-dollar-circle-line ri-24px"></i></span></div>
                     </div>
                 </div>
             </div>
@@ -72,7 +70,7 @@
             <div class="card h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
-                        <div><p class="text-muted mb-1">Total Transaksi</p><h4 class="mb-0">{{ total_transaksi }}</h4></div>
+                        <div><p class="text-muted mb-1">Total Transaksi</p><h4 class="mb-0 text-primary">{{ total_transaksi }}</h4><small class="text-primary"><i class="ri-exchange-line"></i> transaksi berhasil</small></div>
                         <div class="avatar"><span class="avatar-initial rounded bg-label-primary"><i class="ri-exchange-line ri-24px"></i></span></div>
                     </div>
                 </div>
@@ -102,7 +100,7 @@
                         <td colspan="3" class="text-start ps-4 py-3" style="vertical-align: middle;">
                             <div class="d-flex align-items-center"><i class="ri-calculator-line me-2 text-primary" style="font-size: 1.5rem;"></i><div class="text-start"><strong class="d-block" style="font-size: 1rem;">RINGKASAN</strong><small class="text-muted" style="font-size: 0.75rem;">{{ total_transaksi }} Transaksi</small></div></div>
                         </td>
-                        <td class="py-3" style="vertical-align: middle;"><div class="d-flex flex-column align-items-center"><span class="badge bg-label-success d-flex align-items-center gap-1 mb-2" style="font-size: 0.9rem; padding: 0.5rem 0.75rem; min-width: 120px;"><i class="ri-money-dollar-circle-line"></i><span>Rp {{ total_pendapatan|floatformat:0|intcomma }}</span></span><small class="text-muted fw-medium" style="font-size: 0.75rem;">Total Pendapatan</small></div></td>
+                        <td class="py-3" style="vertical-align: middle;"><div class="d-flex flex-column align-items-center"><span class="badge bg-label-success d-flex align-items-center gap-1 mb-1" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;"><span>Rp {{ total_pendapatan|floatformat:0|intcomma }}</span></span><small class="text-muted" style="font-size: 0.7rem;">Total Pendapatan</small></div></td>
                         <td class="py-3"></td>
                     </tr>
                 </tfoot>

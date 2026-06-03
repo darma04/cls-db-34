@@ -12,15 +12,20 @@ from django.db.models import Count
 
 from web_project import TemplateLayout
 from apps.core.models import RolePermission
-from apps.core.mixins import SuperuserRequiredMixin
 from auth.models import Profile
+
+from apps.core.mixins import (
+    ReadPermissionMixin, CreatePermissionMixin, UpdatePermissionMixin, DeletePermissionMixin
+)
+from apps.core.cache_utils import invalidate_role_permissions_cache
 
 import json
 
 
 @method_decorator(login_required, name='dispatch')
-class RoleListView(SuperuserRequiredMixin, ListView):
+class RoleListView(ReadPermissionMixin, ListView):
     """Halaman utama Access Control — Daftar Role dengan Permission Matrix."""
+    permission_module = 'access_control'
     model = User
     template_name = 'permission_management/role_list.html'
     context_object_name = 'users'
@@ -70,8 +75,9 @@ class RoleListView(SuperuserRequiredMixin, ListView):
 
 
 @method_decorator(login_required, name='dispatch')
-class RoleDataAjaxView(SuperuserRequiredMixin, View):
+class RoleDataAjaxView(ReadPermissionMixin, View):
     """AJAX: Ambil data permission suatu role."""
+    permission_module = 'access_control'
     def get(self, request, role):
         try:
             permissions = RolePermission.objects.filter(role=role).values(
@@ -89,8 +95,9 @@ class RoleDataAjaxView(SuperuserRequiredMixin, View):
 
 
 @method_decorator(login_required, name='dispatch')
-class RoleCreateAjaxView(SuperuserRequiredMixin, View):
+class RoleCreateAjaxView(CreatePermissionMixin, View):
     """AJAX: Buat role baru dengan permissions."""
+    permission_module = 'access_control'
     def post(self, request):
         from django.db import transaction
         try:
@@ -131,17 +138,22 @@ class RoleCreateAjaxView(SuperuserRequiredMixin, View):
                 if new_permissions:
                     RolePermission.objects.bulk_create(new_permissions)
 
+            invalidate_role_permissions_cache(role_name)
             return JsonResponse({'success': True, 'message': f'Role {role_name} berhasil ditambahkan dengan {len(new_permissions)} permissions!'})
         except Exception as e:
             return JsonResponse({'success': False, 'message': f'Error: {str(e)}'}, status=500)
 
 
 @method_decorator(login_required, name='dispatch')
-class RoleUpdateAjaxView(SuperuserRequiredMixin, View):
+class RoleUpdateAjaxView(UpdatePermissionMixin, View):
     """AJAX: Update permission role."""
+    permission_module = 'access_control'
     def post(self, request, role):
         from django.db import transaction
         try:
+            if role == 'SUPERUSER':
+                return JsonResponse({'success': False, 'message': 'Role SUPERUSER tidak dapat diedit.'}, status=400)
+
             new_role_name = request.POST.get('role_name', '').strip()
             if new_role_name:
                 new_role_name = new_role_name.replace(' ', '_').upper()
@@ -189,10 +201,8 @@ class RoleUpdateAjaxView(SuperuserRequiredMixin, View):
                 if new_permissions:
                     RolePermission.objects.bulk_create(new_permissions)
 
-            # Invalidate cache
-            from django.core.cache import cache
-            cache.delete(f'role_perms_{old_role_name}')
-            cache.delete(f'role_perms_{target_role}')
+            invalidate_role_permissions_cache(old_role_name)
+            invalidate_role_permissions_cache(target_role)
 
             return JsonResponse({'success': True, 'message': f'Permissions untuk role berhasil diupdate! ({len(new_permissions)} permissions)'})
         except Exception as e:
@@ -200,8 +210,9 @@ class RoleUpdateAjaxView(SuperuserRequiredMixin, View):
 
 
 @method_decorator(login_required, name='dispatch')
-class RoleDeleteView(SuperuserRequiredMixin, View):
+class RoleDeleteView(DeletePermissionMixin, View):
     """AJAX: Hapus role beserta semua permission-nya."""
+    permission_module = 'access_control'
     def post(self, request, role_code):
         import json as json_lib
         try:
@@ -228,8 +239,7 @@ class RoleDeleteView(SuperuserRequiredMixin, View):
                     Profile.objects.filter(role=role_code).update(role='')
 
                 deleted_count, _ = RolePermission.objects.filter(role=role_code).delete()
-            from django.core.cache import cache
-            cache.delete(f'role_perms_{role_code}')
+            invalidate_role_permissions_cache(role_code)
 
             return JsonResponse({'success': True, 'message': f'Role berhasil dihapus. ({deleted_count} permission records dihapus)'})
         except Exception as e:
